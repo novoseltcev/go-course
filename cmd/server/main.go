@@ -22,7 +22,7 @@ func main() {
 
 func updateMetricHandler(counterStorage *storage.Storage[int64], gaugeStorage *storage.Storage[float64]) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
-		if req.Method != http.MethodPost || req.Header.Get("content-type") != "text/plain" {
+		if req.Method != http.MethodPost {
 			res.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}

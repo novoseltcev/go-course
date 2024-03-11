@@ -27,37 +27,37 @@ func updateMetricHandler(counterStorage *storage.Storage[int64], gaugeStorage *s
 			return
 		}
 
-		var path_params = strings.Split(
+		var pathParams = strings.Split(
 			strings.TrimPrefix(req.URL.Path, `/update/`),
 			`/`,
 		)
 
-		if len(path_params) < 3 {
+		if len(pathParams) < 3 {
 			res.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		metric_type := path_params[0]
-		metric_name := path_params[1]
-		metric_value := path_params[2]
+		metricType := pathParams[0]
+		metricName := pathParams[1]
+		metricValue := pathParams[2]
 
-		switch metric_type {
+		switch metricType {
 		case "gauge":
-			value, err := strconv.ParseFloat(metric_value, 64)
+			value, err := strconv.ParseFloat(metricValue, 64)
 			if err != nil {
 				res.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		
-			(*gaugeStorage).Update(metric_name, value)
+			(*gaugeStorage).Update(metricName, value)
 		case "counter":
-			value, err := strconv.ParseInt(metric_value, 10, 64)
+			value, err := strconv.ParseInt(metricValue, 10, 64)
 			if err != nil {
 				res.WriteHeader(http.StatusBadRequest)
 				return
 			}
 
-			(*counterStorage).Update(metric_name, value)
+			(*counterStorage).Update(metricName, value)
 		default:
 			res.WriteHeader(http.StatusBadRequest)
 			return

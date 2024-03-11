@@ -9,8 +9,8 @@ import (
 
 
 func main() {
-	var counterStorage storage.Storage[int64] = storage.MemStorage[int64]{}
-	var gaugeStorage storage.Storage[float64] = storage.MemStorage[float64]{}
+	var counterStorage storage.Storage[int64] = storage.MemStorage[int64]{Metrics: make(map[string]int64)}
+	var gaugeStorage storage.Storage[float64] = storage.MemStorage[float64]{Metrics: make(map[string]float64)}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc(`/update/`, updateMetricHandler(&counterStorage, &gaugeStorage))

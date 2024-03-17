@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 	"github.com/novoseltcev/go-course/internal/agent"
 	"github.com/robfig/cron"
@@ -25,5 +28,8 @@ func main() {
 	defer c.Stop()
 	c.Start()
 	
-	fmt.Scanln()
+
+    quitChannel := make(chan os.Signal, 1)
+    signal.Notify(quitChannel, syscall.SIGINT, syscall.SIGTERM)
+    <-quitChannel
 }

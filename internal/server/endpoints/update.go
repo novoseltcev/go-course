@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 func UpdateMetric(counterStorage *storage.Storage[storage.Counter], gaugeStorage *storage.Storage[storage.Gauge]) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
+		fmt.Printf("Handle %s\n", req.RequestURI)
 		if req.Method != http.MethodPost {
 			res.WriteHeader(http.StatusMethodNotAllowed)
 			return

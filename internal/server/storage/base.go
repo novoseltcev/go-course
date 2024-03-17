@@ -1,11 +1,14 @@
 package storage
 
-type Metric[T int64 | float64] struct {
+type Counter int64
+type Gauge float64
+
+type Metric[T Counter | Gauge] struct {
 	Name string
 	Value T
 }
 
-type Storage[T int64 | float64] interface {
+type Storage[T Counter | Gauge] interface {
 	GetAll() []Metric[T]
 	Update(string, T)
 }

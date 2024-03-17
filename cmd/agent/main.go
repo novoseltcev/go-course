@@ -16,12 +16,14 @@ func main() {
 
 	var pollInterval time.Duration = 2
 	var reportInterval time.Duration = 10
-	var baseUrl = "http://localhost:8080"
+	var baseURL = "http://0.0.0.0:8080"
 
 	c := cron.New()
 	c.AddFunc(fmt.Sprintf("@every %ds", pollInterval), agent.CollectMetrics(&counterStorage, &gaugeStorage))
-	c.AddFunc(fmt.Sprintf("@every %ds", reportInterval), agent.SendMetrics(&counterStorage, &gaugeStorage, &client, baseUrl))
-	c.Start()
+	c.AddFunc(fmt.Sprintf("@every %ds", reportInterval), agent.SendMetrics(&counterStorage, &gaugeStorage, &client, baseURL))
+
 	defer c.Stop()
+	c.Start()
+	
 	fmt.Scanln()
 }

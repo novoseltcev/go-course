@@ -1,7 +1,6 @@
 package storage
 
-
-type MemStorage[T int64 | float64] struct {
+type MemStorage[T Counter | Gauge] struct {
 	Metrics map[string]T
 }
 
@@ -15,9 +14,9 @@ func (storage MemStorage[T]) GetAll() []Metric[T] {
 
 func (storage MemStorage[T]) Update(name string, value T) {
 	switch any(value).(type) {
-	case float64:
-		storage.Metrics[name] = value
-	case int64:
+	case Counter:
 		storage.Metrics[name] = storage.Metrics[name] + value
+	case Gauge:
+		storage.Metrics[name] = value
 	}
 }

@@ -18,10 +18,10 @@ func TestSendMetrics(t *testing.T) {
 	counterStorage := Storage[int64]{"SomeCounter": 1}
 	gaugeStorage := Storage[float64]{"SomeGauge": 1.0}
 	var client Client = ClientMock{}
-	baseUrl := "http://some"
+	baseURL := "http://some"
 
 
-	SendMetrics(&counterStorage, &gaugeStorage, client, baseUrl)()
+	SendMetrics(&counterStorage, &gaugeStorage, client, baseURL)()
 
 	assert.Empty(t, counterStorage)
 	assert.Empty(t, gaugeStorage)

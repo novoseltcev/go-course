@@ -11,20 +11,20 @@ type Client interface {
 	Post(string, string, io.Reader) (*http.Response, error)
 }
 
-func SendMetrics(counterStorage *Storage[int64], gaugeStorage *Storage[float64], client Client, baseUrl string) func() {
+func SendMetrics(counterStorage *Storage[int64], gaugeStorage *Storage[float64], client Client, baseURL string) func() {
 	fmt.Println("init SendMetrics worker")
 	return func ()  {
 		fmt.Printf("counters length=%d; gauge length=%d\n", len(*counterStorage), len(*gaugeStorage))
 
 		for name, value := range *gaugeStorage {
-			err := send(client, baseUrl, "gauge", name, fmt.Sprintf("%f", value))
+			err := send(client, baseURL, "gauge", name, fmt.Sprintf("%f", value))
 			if err == nil {
 				delete(*gaugeStorage, name)
 			}
 		}
 
 		for name, value := range *counterStorage {
-			err := send(client, baseUrl, "counter", name, fmt.Sprintf("%d", value))
+			err := send(client, baseURL, "counter", name, fmt.Sprintf("%d", value))
 			if err == nil {
 				delete(*counterStorage, name)
 			}
@@ -33,8 +33,8 @@ func SendMetrics(counterStorage *Storage[int64], gaugeStorage *Storage[float64],
 	}
 }
 
-func send(client Client, baseUrl string, metricType string, name string, value string) error {
-	url := fmt.Sprintf("%s/update/%s/%s/%s", baseUrl, metricType, name, value)
+func send(client Client, baseURL string, metricType string, name string, value string) error {
+	url := fmt.Sprintf("%s/update/%s/%s/%s", baseURL, metricType, name, value)
 
 	response, err := client.Post(url, "text/plain", http.NoBody)
 	if err != nil {

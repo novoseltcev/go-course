@@ -8,7 +8,7 @@ import (
 )
 
 
-func UpdateMetric(counterStorage *storage.Storage[int64], gaugeStorage *storage.Storage[float64]) http.HandlerFunc {
+func UpdateMetric(counterStorage *storage.Storage[storage.Counter], gaugeStorage *storage.Storage[storage.Gauge]) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodPost {
 			res.WriteHeader(http.StatusMethodNotAllowed)
@@ -37,7 +37,7 @@ func UpdateMetric(counterStorage *storage.Storage[int64], gaugeStorage *storage.
 				return
 			}
 			
-			(*gaugeStorage).Update(metricName, value)
+			(*gaugeStorage).Update(metricName, storage.Gauge(value))
 		case "counter":
 			value, err := strconv.ParseInt(metricValue, 10, 64)
 			if err != nil {
@@ -45,12 +45,12 @@ func UpdateMetric(counterStorage *storage.Storage[int64], gaugeStorage *storage.
 				return
 			}
 
-			(*counterStorage).Update(metricName, value)
+			(*counterStorage).Update(metricName, storage.Counter(value))
 		default:
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
+		
 		res.WriteHeader(http.StatusOK)
 	}
 }

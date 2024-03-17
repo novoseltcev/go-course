@@ -188,6 +188,7 @@ func TestUpdateMetric(t *testing.T) {
 			handler := UpdateMetric(&counterStorage, &gaugeStorage)
 			handler(w, httptest.NewRequest(tt.method, tt.url, nil))
 			response := w.Result()
+			response.Body.Close()
 
 			assert.Equal(t, tt.status, response.StatusCode)
 

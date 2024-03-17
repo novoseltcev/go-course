@@ -17,8 +17,8 @@ func (c ClientMock) Post (string, string, io.Reader) (*http.Response, error) {
 func TestSendMetrics(t *testing.T) {
 	counterStorage := Storage[int64]{"SomeCounter": 1}
 	gaugeStorage := Storage[float64]{"SomeGauge": 1.0}
-	var client Client = ClientMock{}
-	baseURL := "http://some"
+	var client Client = &http.Client{}
+	baseURL := "http://0.0.0.0:8080"
 
 
 	SendMetrics(&counterStorage, &gaugeStorage, client, baseURL)()

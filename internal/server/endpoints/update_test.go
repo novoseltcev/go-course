@@ -11,7 +11,7 @@ import (
 )
 
 
-func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, int, string) {
+func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
 	req, err := http.NewRequest(method, ts.URL + path, http.NoBody)
 	require.NoError(t, err)
 
@@ -22,7 +22,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 	respBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	return resp, resp.StatusCode, string(respBody)
+	return resp, string(respBody)
 }
 
 type want[T Counter | Gauge] struct {
@@ -203,12 +203,13 @@ func TestUpdateMetric(t *testing.T) {
 			ts := httptest.NewServer(MetricRouter(&counterStorage, &gaugeStorage))
     		defer ts.Close()
 
-			_, statusCode, _ := testRequest(t, ts, tt.method, tt.url)
+			response, _ := testRequest(t, ts, tt.method, tt.url)
+			defer response.Body.Close()
 
-			assert.Equal(t, tt.status, statusCode)
+			assert.Equal(t, tt.status, response.StatusCode)
 
 			if tt.result.counter != nil {
-				require.Equal(t, http.StatusOK, statusCode)
+				require.Equal(t, http.StatusOK, response.StatusCode)
 
 				metrics := tt.args.counterStorage.Metrics
 				require.Len(t, metrics, tt.result.counter.length)
@@ -217,7 +218,7 @@ func TestUpdateMetric(t *testing.T) {
 				assert.Equal(t, metric.Value, metrics[metric.Name])
 			}
 			if tt.result.gauge != nil {
-				require.Equal(t, http.StatusOK, statusCode)
+				require.Equal(t, http.StatusOK, response.StatusCode)
 
 				metrics := tt.args.gaugeStorage.Metrics
 				require.Len(t, metrics, tt.result.gauge.length)

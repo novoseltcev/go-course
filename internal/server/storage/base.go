@@ -9,6 +9,7 @@ type Metric[T Counter | Gauge] struct {
 }
 
 type Storage[T Counter | Gauge] interface {
+	GetByName(string) *T
 	GetAll() []Metric[T]
 	Update(string, T)
 }

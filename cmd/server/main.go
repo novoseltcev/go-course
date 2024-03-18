@@ -11,10 +11,10 @@ func main() {
 	var counterStorage storage.Storage[storage.Counter] = storage.MemStorage[storage.Counter]{Metrics: make(map[string]storage.Counter)}
 	var gaugeStorage storage.Storage[storage.Gauge] = storage.MemStorage[storage.Gauge]{Metrics: make(map[string]storage.Gauge)}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc(`/update/`, endpoints.UpdateMetric(&counterStorage, &gaugeStorage))
+	r := endpoints.MetricRouter(&counterStorage, &gaugeStorage)
 
-	if err := http.ListenAndServe(`:8080`, mux); err != nil {
+	if err := http.ListenAndServe(`:8080`, r); err != nil {
 		panic(err)
 	}
 }
+

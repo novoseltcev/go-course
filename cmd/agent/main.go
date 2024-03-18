@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 	"github.com/novoseltcev/go-course/internal/agent"
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 )
 
 

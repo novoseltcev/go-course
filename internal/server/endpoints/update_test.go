@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +11,19 @@ import (
 )
 
 
+func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, int, string) {
+	req, err := http.NewRequest(method, ts.URL + path, http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := ts.Client().Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	return resp, resp.StatusCode, string(respBody)
+}
 
 type want[T Counter | Gauge] struct {
 	metric Metric[T]
@@ -116,8 +130,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "invalid method",
 			args: args{
-				counterStorage: MemStorage[Counter]{},
-				gaugeStorage: MemStorage[Gauge]{},
+				counterStorage: MemStorage[Counter]{Metrics: make(map[string]Counter)},
+				gaugeStorage: MemStorage[Gauge]{Metrics: make(map[string]Gauge)},
 			},
 			method: http.MethodGet,
 			url: "/update/gauge/some/123.56",
@@ -182,18 +196,19 @@ func TestUpdateMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-            w := httptest.NewRecorder()
+
 			var counterStorage Storage[Counter] = tt.args.counterStorage
 			var gaugeStorage Storage[Gauge] = tt.args.gaugeStorage
-			handler := UpdateMetric(&counterStorage, &gaugeStorage)
-			handler(w, httptest.NewRequest(tt.method, tt.url, nil))
-			response := w.Result()
-			response.Body.Close()
 
-			assert.Equal(t, tt.status, response.StatusCode)
+			ts := httptest.NewServer(MetricRouter(&counterStorage, &gaugeStorage))
+    		defer ts.Close()
+
+			_, statusCode, _ := testRequest(t, ts, tt.method, tt.url)
+
+			assert.Equal(t, tt.status, statusCode)
 
 			if tt.result.counter != nil {
-				require.Equal(t, http.StatusOK, response.StatusCode)
+				require.Equal(t, http.StatusOK, statusCode)
 
 				metrics := tt.args.counterStorage.Metrics
 				require.Len(t, metrics, tt.result.counter.length)
@@ -202,7 +217,7 @@ func TestUpdateMetric(t *testing.T) {
 				assert.Equal(t, metric.Value, metrics[metric.Name])
 			}
 			if tt.result.gauge != nil {
-				require.Equal(t, http.StatusOK, response.StatusCode)
+				require.Equal(t, http.StatusOK, statusCode)
 
 				metrics := tt.args.gaugeStorage.Metrics
 				require.Len(t, metrics, tt.result.gauge.length)

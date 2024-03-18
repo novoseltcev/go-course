@@ -1,22 +1,40 @@
 package storage
 
+import "sort"
+
 type MemStorage[T Counter | Gauge] struct {
 	Metrics map[string]T
 }
 
-func (storage MemStorage[T]) GetAll() []Metric[T] {
-	var result = make([]Metric[T], len(storage.Metrics))
-	for name, value := range storage.Metrics {
-		result = append(result, Metric[T]{Name: name, Value: value})
+func (s MemStorage[T]) GetAll() []Metric[T] {
+	names := make([]string, 0, len(s.Metrics))
+	for name := range s.Metrics {
+		names = append(names, name)
 	}
+	sort.Strings(names)
+
+	result := make([]Metric[T], 0, len(s.Metrics))
+	for _, name := range names {
+		result = append(result, Metric[T]{Name: name, Value: s.Metrics[name]})
+	}
+
 	return result
 }
 
-func (storage MemStorage[T]) Update(name string, value T) {
+func (s MemStorage[T]) Update(name string, value T) {
 	switch any(value).(type) {
 	case Counter:
-		storage.Metrics[name] = storage.Metrics[name] + value
+		s.Metrics[name] = s.Metrics[name] + value
 	case Gauge:
-		storage.Metrics[name] = value
+		s.Metrics[name] = value
 	}
+}
+
+func (s MemStorage[T]) GetByName(name string) *T {
+	val, ok := s.Metrics[name]
+	if !ok {
+		return nil
+	}
+
+	return &val
 }

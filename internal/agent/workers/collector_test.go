@@ -1,4 +1,4 @@
-package agent
+package workers
 
 import (
 	"testing"
@@ -8,8 +8,8 @@ import (
 
 
 func TestCollectMetricsToEmptyStorage(t *testing.T) {
-	counterStorage := make(Storage[int64])
-	gaugeStorage := make(Storage[float64])
+	counterStorage := make(map[string]int64)
+	gaugeStorage := make(map[string]float64)
 
 	require.Empty(t, gaugeStorage)
 	require.Empty(t, counterStorage)
@@ -62,8 +62,8 @@ func TestCollectMetricsToEmptyStorage(t *testing.T) {
 
 func TestCollectMetricsToFullStorage(t *testing.T) {
 	var pollCount int64 = 1
-	counterStorage := Storage[int64]{"PollCount": pollCount}
-	gaugeStorage := Storage[float64]{
+	counterStorage := map[string]int64{"PollCount": pollCount}
+	gaugeStorage := map[string]float64{
 		"Alloc": 0.0,
 		"BuckHashSys": 0.0,
 		"Frees": 0.0,

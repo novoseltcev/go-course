@@ -200,7 +200,7 @@ func TestUpdateMetric(t *testing.T) {
 			var counterStorage Storage[Counter] = tt.args.counterStorage
 			var gaugeStorage Storage[Gauge] = tt.args.gaugeStorage
 
-			ts := httptest.NewServer(MetricRouter(&counterStorage, &gaugeStorage))
+			ts := httptest.NewServer(GetRouter(&counterStorage, &gaugeStorage))
     		defer ts.Close()
 
 			response, _ := testRequest(t, ts, tt.method, tt.url)

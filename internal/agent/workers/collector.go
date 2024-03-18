@@ -1,14 +1,13 @@
-package agent
+package workers
 
 import (
-	"math/rand"
 	"fmt"
+	"math/rand"
 	"runtime"
 )
 
-type Storage[T int64 | float64] map[string]T
 
-func CollectMetrics(counterStorage *Storage[int64], gaugeStorage *Storage[float64]) func() {
+func CollectMetrics(counterStorage *map[string]int64, gaugeStorage *map[string]float64) func() {
 	fmt.Println("init CollectMetrics worker")
 	return func () {
 		collectRuntimeMetrics(gaugeStorage)
@@ -17,7 +16,7 @@ func CollectMetrics(counterStorage *Storage[int64], gaugeStorage *Storage[float6
 	}
 }
 
-func collectRuntimeMetrics (storage *Storage[float64]) {
+func collectRuntimeMetrics (storage *map[string]float64) {
 	rtm := new(runtime.MemStats)
 	runtime.ReadMemStats(rtm)
 	(*storage)["Alloc"] = float64(rtm.Alloc)

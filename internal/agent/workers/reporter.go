@@ -1,4 +1,4 @@
-package agent
+package workers
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ type Client interface {
 	Post(string, string, io.Reader) (*http.Response, error)
 }
 
-func SendMetrics(counterStorage *Storage[int64], gaugeStorage *Storage[float64], client Client, baseURL string) func() {
+func SendMetrics(counterStorage * map[string]int64, gaugeStorage * map[string]float64, client Client, baseURL string) func() {
 	fmt.Println("init SendMetrics worker")
 	return func ()  {
 		fmt.Printf("counters length=%d; gauge length=%d\n", len(*counterStorage), len(*gaugeStorage))

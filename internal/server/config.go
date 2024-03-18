@@ -1,5 +1,5 @@
 package server
 
 type Config struct {
-	Address string
+	Address string `env:"ADDRESS"`
 }

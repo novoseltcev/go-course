@@ -4,6 +4,7 @@ import (
 	"time"
 	"github.com/novoseltcev/go-course/internal/agent"
 	"github.com/spf13/cobra"
+	"github.com/caarlos0/env/v10"
 )
 
 func Cmd() *cobra.Command {
@@ -20,6 +21,8 @@ func Cmd() *cobra.Command {
 				PollInterval: time.Duration(pollInterval) * time.Second,
 				ReportInterval: time.Duration(reportInterval) * time.Second,
 			}
+			env.Parse(&config)
+
 			a := agent.NewAgent(config)
 			a.Start()
 		},

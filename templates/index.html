@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Metrics</title>
+    </head>
+    <body>
+        <div>
+            <h2>Counter Metrics</h2>
+            <ul>
+                {{if .CounterMetrics}}
+                    {{range .CounterMetrics}}
+                        <li>
+                            <div><b>{{ .Name }}</b>: {{ .Value }}</div>
+                        </li>
+                    {{end}}
+                {{else}}
+                    <div>Empty</div>
+                {{end}}
+            </ul>
+        </div>
+        <div>
+            <h2>Gauge Metrics</h2>
+            <ul>
+                {{if .GaugeMetrics}}
+                    {{range .GaugeMetrics}}
+                        <li>
+                            <div><b>{{ .Name }}</b>: {{ .Value }}</div>
+                        </li>
+                    {{end}}
+                {{else}}
+                    <div>Empty</div>
+                {{end}}
+            </ul>
+        </div>
+        
+    </body>
+</html>

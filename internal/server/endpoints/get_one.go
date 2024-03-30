@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
 	"github.com/go-chi/chi/v5"
-	"github.com/novoseltcev/go-course/internal/server/storage"
+
+	"github.com/novoseltcev/go-course/internal/types"
 )
 
 
-func GetOneMetric(counterStorage *storage.Storage[storage.Counter], gaugeStorage *storage.Storage[storage.Gauge]) http.HandlerFunc {
+func GetOneMetric(counterStorage *MetricStorager[types.Counter], gaugeStorage *MetricStorager[types.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "metricType")
 		metricName := chi.URLParam(r, "metricName")

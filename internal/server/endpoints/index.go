@@ -3,15 +3,16 @@ package endpoints
 import (
 	"html/template"
 	"net/http"
-	"github.com/novoseltcev/go-course/internal/server/storage"
+
+	"github.com/novoseltcev/go-course/internal/types"
 )
 
 
-func Index(counterStorage *storage.Storage[storage.Counter], gaugeStorage *storage.Storage[storage.Gauge]) http.HandlerFunc {
+func Index(counterStorage *MetricStorager[types.Counter], gaugeStorage *MetricStorager[types.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := struct {
-			CounterMetrics []storage.Metric[storage.Counter]
-			GaugeMetrics []storage.Metric[storage.Gauge]
+			CounterMetrics []types.Metric[types.Counter]
+			GaugeMetrics []types.Metric[types.Gauge]
 		}{
 			CounterMetrics: (*counterStorage).GetAll(),
 			GaugeMetrics: (*gaugeStorage).GetAll(),

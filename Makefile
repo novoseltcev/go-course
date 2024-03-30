@@ -10,7 +10,7 @@ build-server: $(SERVER_DIR)/main.go
 build: build-agent build-server
 
 agent: $(AGENT_DIR)/agent
-	$(AGENT_DIR)/agent
+	$(AGENT_DIR)/agent -a 0.0.0.0:8080 -p 5 -r 5
 
 server: $(SERVER_DIR)/server
-	$(SERVER_DIR)/server
+	$(SERVER_DIR)/server -a :8080

@@ -2,13 +2,15 @@ package endpoints
 
 import (
 	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/novoseltcev/go-course/internal/server/storage"
+
+	"github.com/novoseltcev/go-course/internal/types"
 )
 
 
-func GetRouter(counterStorage *storage.Storage[storage.Counter], gaugeStorage *storage.Storage[storage.Gauge]) http.Handler {
+func GetRouter(counterStorage *MetricStorager[types.Counter], gaugeStorage *MetricStorager[types.Gauge]) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	

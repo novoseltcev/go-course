@@ -5,9 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	. "github.com/novoseltcev/go-course/internal/server/storage"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/types"
 )
 
 
@@ -25,19 +28,19 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 	return resp, string(respBody)
 }
 
-type want[T Counter | Gauge] struct {
-	metric Metric[T]
+type want[T types.Counter | types.Gauge] struct {
+	metric types.Metric[T]
 	length int
 }
 
 func TestUpdateMetric(t *testing.T) {
 	type args struct {
-		counterStorage MemStorage[Counter]
-		gaugeStorage MemStorage[Gauge]
+		counterStorage storage.MemStorage[types.Counter]
+		gaugeStorage storage.MemStorage[types.Gauge]
 	}
 	type result struct {
-		counter *want[Counter]
-		gauge *want[Gauge]
+		counter *want[types.Counter]
+		gauge *want[types.Gauge]
 	}
 	tests := []struct {
 		name string
@@ -50,19 +53,19 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "add new counter",
 			args: args{
-				counterStorage: MemStorage[Counter]{
-					Metrics: make(map[string]Counter),
+				counterStorage: storage.MemStorage[types.Counter]{
+					Metrics: make(map[string]types.Counter),
 				},
-				gaugeStorage: MemStorage[Gauge]{
-					Metrics: make(map[string]Gauge),
+				gaugeStorage: storage.MemStorage[types.Gauge]{
+					Metrics: make(map[string]types.Gauge),
 				},
 			},
 			method: http.MethodPost,
 			url: "/update/counter/some/1",
 			status: http.StatusOK,
 			result: result{
-				counter: &want[Counter]{
-					metric: Metric[Counter]{Name: "some", Value: 1},
+				counter: &want[types.Counter]{
+					metric: types.Metric[types.Counter]{Name: "some", Value: 1},
 					length: 1,
 				},
 			},
@@ -70,19 +73,19 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "add new gauge",
 			args: args{
-				counterStorage: MemStorage[Counter]{
-					Metrics: make(map[string]Counter),
+				counterStorage: storage.MemStorage[types.Counter]{
+					Metrics: make(map[string]types.Counter),
 				},
-				gaugeStorage: MemStorage[Gauge]{
-					Metrics: make(map[string]Gauge),
+				gaugeStorage: storage.MemStorage[types.Gauge]{
+					Metrics: make(map[string]types.Gauge),
 				},
 			},
 			method: http.MethodPost,
 			url: "/update/gauge/some/123.56",
 			status: http.StatusOK,
 			result: result{
-				gauge: &want[Gauge]{
-					metric: Metric[Gauge]{Name: "some", Value: 123.56},
+				gauge: &want[types.Gauge]{
+					metric: types.Metric[types.Gauge]{Name: "some", Value: 123.56},
 					length: 1,
 				},
 			},
@@ -90,19 +93,19 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "add exists counter",
 			args: args{
-				counterStorage: MemStorage[Counter]{
-					Metrics: map[string]Counter{"some": 1},
+				counterStorage: storage.MemStorage[types.Counter]{
+					Metrics: map[string]types.Counter{"some": 1},
 				},
-				gaugeStorage: MemStorage[Gauge]{
-					Metrics: make(map[string]Gauge),
+				gaugeStorage: storage.MemStorage[types.Gauge]{
+					Metrics: make(map[string]types.Gauge),
 				},
 			},
 			method: http.MethodPost,
 			url: "/update/counter/some/2",
 			status: http.StatusOK,
 			result: result{
-				counter: &want[Counter]{
-					metric: Metric[Counter]{Name: "some", Value: 3},
+				counter: &want[types.Counter]{
+					metric: types.Metric[types.Counter]{Name: "some", Value: 3},
 					length: 1,
 				},
 			},
@@ -110,19 +113,19 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "add exists gauge",
 			args: args{
-				counterStorage: MemStorage[Counter]{
-					Metrics: make(map[string]Counter),
+				counterStorage: storage.MemStorage[types.Counter]{
+					Metrics: make(map[string]types.Counter),
 				},
-				gaugeStorage: MemStorage[Gauge]{
-					Metrics: map[string]Gauge{"some": 11.32},
+				gaugeStorage: storage.MemStorage[types.Gauge]{
+					Metrics: map[string]types.Gauge{"some": 11.32},
 				},
 			},
 			method: http.MethodPost,
 			url: "/update/gauge/some/123.56",
 			status: http.StatusOK,
 			result: result{
-				gauge: &want[Gauge]{
-					metric: Metric[Gauge]{Name: "some", Value: 123.56},
+				gauge: &want[types.Gauge]{
+					metric: types.Metric[types.Gauge]{Name: "some", Value: 123.56},
 					length: 1,
 				},
 			},
@@ -130,8 +133,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "invalid method",
 			args: args{
-				counterStorage: MemStorage[Counter]{Metrics: make(map[string]Counter)},
-				gaugeStorage: MemStorage[Gauge]{Metrics: make(map[string]Gauge)},
+				counterStorage: storage.MemStorage[types.Counter]{Metrics: make(map[string]types.Counter)},
+				gaugeStorage: storage.MemStorage[types.Gauge]{Metrics: make(map[string]types.Gauge)},
 			},
 			method: http.MethodGet,
 			url: "/update/gauge/some/123.56",
@@ -141,8 +144,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "miss gauge value",
 			args: args{
-				counterStorage: MemStorage[Counter]{},
-				gaugeStorage: MemStorage[Gauge]{},
+				counterStorage: storage.MemStorage[types.Counter]{},
+				gaugeStorage: storage.MemStorage[types.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/gauge/some",
@@ -152,8 +155,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "miss counter value",
 			args: args{
-				counterStorage: MemStorage[Counter]{},
-				gaugeStorage: MemStorage[Gauge]{},
+				counterStorage: storage.MemStorage[types.Counter]{},
+				gaugeStorage: storage.MemStorage[types.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/counter/some",
@@ -163,8 +166,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "unknown metric type",
 			args: args{
-				counterStorage: MemStorage[Counter]{},
-				gaugeStorage: MemStorage[Gauge]{},
+				counterStorage: storage.MemStorage[types.Counter]{},
+				gaugeStorage: storage.MemStorage[types.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/some/some/1",
@@ -174,8 +177,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "invalid gauge value",
 			args: args{
-				counterStorage: MemStorage[Counter]{},
-				gaugeStorage: MemStorage[Gauge]{},
+				counterStorage: storage.MemStorage[types.Counter]{},
+				gaugeStorage: storage.MemStorage[types.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/gauge/some/value",
@@ -185,8 +188,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "invalid counter value",
 			args: args{
-				counterStorage: MemStorage[Counter]{},
-				gaugeStorage: MemStorage[Gauge]{},
+				counterStorage: storage.MemStorage[types.Counter]{},
+				gaugeStorage: storage.MemStorage[types.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/counter/some/1.",
@@ -197,8 +200,8 @@ func TestUpdateMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			var counterStorage Storage[Counter] = tt.args.counterStorage
-			var gaugeStorage Storage[Gauge] = tt.args.gaugeStorage
+			var counterStorage MetricStorager[types.Counter] = &tt.args.counterStorage
+			var gaugeStorage MetricStorager[types.Gauge] = &tt.args.gaugeStorage
 
 			ts := httptest.NewServer(GetRouter(&counterStorage, &gaugeStorage))
     		defer ts.Close()

@@ -3,12 +3,14 @@ package endpoints
 import (
 	"net/http"
 	"strconv"
+
 	"github.com/go-chi/chi/v5"
-	"github.com/novoseltcev/go-course/internal/server/storage"
+
+	"github.com/novoseltcev/go-course/internal/types"
 )
 
 
-func UpdateMetric(counterStorage *storage.Storage[storage.Counter], gaugeStorage *storage.Storage[storage.Gauge]) http.HandlerFunc {
+func UpdateMetric(counterStorage *MetricStorager[types.Counter], gaugeStorage *MetricStorager[types.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "metricType")
 		metricName := chi.URLParam(r, "metricName")
@@ -22,7 +24,7 @@ func UpdateMetric(counterStorage *storage.Storage[storage.Counter], gaugeStorage
 				return
 			}
 			
-			(*gaugeStorage).Update(metricName, storage.Gauge(value))
+			(*gaugeStorage).Update(metricName, types.Gauge(value))
 		case "counter":
 			value, err := strconv.ParseInt(metricValue, 10, 64)
 			if err != nil {
@@ -30,7 +32,7 @@ func UpdateMetric(counterStorage *storage.Storage[storage.Counter], gaugeStorage
 				return
 			}
 
-			(*counterStorage).Update(metricName, storage.Counter(value))
+			(*counterStorage).Update(metricName, types.Counter(value))
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return

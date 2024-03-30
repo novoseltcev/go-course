@@ -6,15 +6,18 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"github.com/novoseltcev/go-course/internal/agent/workers"
+
 	"github.com/robfig/cron/v3"
+
+	"github.com/novoseltcev/go-course/internal/agent/workers"
+	"github.com/novoseltcev/go-course/internal/types"
 )
 
 type Agent struct {
 	config Config
 	cron *cron.Cron
-	counterStorage map[string]int64
-	gaugeStorage map[string]float64
+	counterStorage map[string]types.Counter
+	gaugeStorage map[string]types.Gauge
 	client http.Client
 }
 
@@ -22,8 +25,8 @@ func NewAgent(config Config) *Agent {
 	return &Agent{
 		config: config,
 		cron: cron.New(),
-		counterStorage: make(map[string]int64),
-		gaugeStorage: make(map[string]float64),
+		counterStorage: make(map[string]types.Counter),
+		gaugeStorage: make(map[string]types.Gauge),
 		client: http.Client{},
 	}
 }

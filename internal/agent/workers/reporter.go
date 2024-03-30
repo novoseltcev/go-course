@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/novoseltcev/go-course/internal/types"
 )
 
 
@@ -11,7 +13,7 @@ type Client interface {
 	Post(string, string, io.Reader) (*http.Response, error)
 }
 
-func SendMetrics(counterStorage * map[string]int64, gaugeStorage * map[string]float64, client Client, baseURL string) func() {
+func SendMetrics(counterStorage * map[string]types.Counter, gaugeStorage * map[string]types.Gauge, client Client, baseURL string) func() {
 	fmt.Println("init SendMetrics worker")
 	return func ()  {
 		fmt.Printf("counters length=%d; gauge length=%d\n", len(*counterStorage), len(*gaugeStorage))

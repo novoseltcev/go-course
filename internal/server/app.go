@@ -2,21 +2,23 @@ package server
 
 import (
 	"net/http"
+
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/types"
 )
 
 type Server struct {
 	config Config
-	counterStorage storage.Storage[storage.Counter]
-	gaugeStorage storage.Storage[storage.Gauge]
+	counterStorage endpoints.MetricStorager[types.Counter]
+	gaugeStorage endpoints.MetricStorager[types.Gauge]
 }
 
 func NewServer(config Config) *Server {
 	return &Server{
 		config: config,
-		counterStorage: storage.MemStorage[storage.Counter]{Metrics: make(map[string]storage.Counter)},
-		gaugeStorage: storage.MemStorage[storage.Gauge]{Metrics: make(map[string]storage.Gauge)},
+		counterStorage: &storage.MemStorage[types.Counter]{Metrics: make(map[string]types.Counter)},
+		gaugeStorage: &storage.MemStorage[types.Gauge]{Metrics: make(map[string]types.Gauge)},
 	}
 }
 

@@ -3,9 +3,9 @@ package server
 import (
 	"net/http"
 
-	"github.com/novoseltcev/go-course/internal/server/endpoints"
-	"github.com/novoseltcev/go-course/internal/server/storage"
 	"github.com/novoseltcev/go-course/internal/types"
+	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/server/endpoints"
 )
 
 type Server struct {

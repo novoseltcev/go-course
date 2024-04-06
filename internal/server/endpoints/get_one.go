@@ -22,10 +22,16 @@ func GetOneMetric(counterStorage *MetricStorager[model.Counter], gaugeStorage *M
 		switch metricType {
 		case "gauge":
 			result := (*gaugeStorage).GetByName(metricName)
-			metricValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", float64(result)), "0"), ".")
+			if result == nil {
+				break
+			}
+			metricValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", float64(*result)), "0"), ".")
 		case "counter":
 			result := (*counterStorage).GetByName(metricName)
-			metricValue = strconv.Itoa(int(result))
+			if result == nil {
+				break
+			}
+			metricValue = strconv.Itoa(int(*result))
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return

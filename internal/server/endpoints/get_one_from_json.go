@@ -21,11 +21,24 @@ func GetOneMetricFromJSON(counterStorage *MetricStorager[model.Counter], gaugeSt
 		w.Header().Set("Content-Type", "application/json")
 		switch metric.MType {
 		case "gauge":
-			result := float64((*gaugeStorage).GetByName(metric.ID))
-			metric.Value = &result
+			result := (*gaugeStorage).GetByName(metric.ID)
+			var value float64
+			if result == nil {
+				value = 0
+			} else {
+				value = float64(*result)
+			}
+			metric.Value = &value
 		case "counter":
-			result := int64((*counterStorage).GetByName(metric.ID))
-			metric.Delta = &result
+			result := (*counterStorage).GetByName(metric.ID)
+
+			var value int64
+			if result == nil {
+				value = 0
+			} else {
+				value = int64(*result)
+			}
+			metric.Delta = &value
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return

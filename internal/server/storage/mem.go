@@ -34,6 +34,11 @@ func (s *MemStorage[T]) Update(name string, value T) {
 	}
 }
 
-func (s MemStorage[T]) GetByName(name string) T {
-	return s.Metrics[name]
+func (s MemStorage[T]) GetByName(name string) *T {
+	result, ok := s.Metrics[name]
+	if !ok {
+		return nil
+	}
+
+	return &result
 }

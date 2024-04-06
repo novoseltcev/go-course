@@ -29,3 +29,6 @@ cmd/agent/main
 cmd/agent/agent
 cmd/server/main
 cmd/server/server
+
+# Code generation
+*_easyjson.go

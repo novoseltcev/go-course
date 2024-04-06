@@ -1,4 +1,4 @@
-package types
+package model
 
 type Counter int64
 type Gauge float64

@@ -1,11 +1,15 @@
 package workers
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 
-	"github.com/novoseltcev/go-course/internal/types"
+	json "github.com/mailru/easyjson"
+
+	"github.com/novoseltcev/go-course/internal/model"
+	"github.com/novoseltcev/go-course/internal/schema"
 )
 
 
@@ -13,32 +17,38 @@ type Client interface {
 	Post(string, string, io.Reader) (*http.Response, error)
 }
 
-func SendMetrics(counterStorage * map[string]types.Counter, gaugeStorage * map[string]types.Gauge, client Client, baseURL string) func() {
+func SendMetrics(counterStorage * map[string]model.Counter, gaugeStorage * map[string]model.Gauge, client Client, baseURL string) func() {
 	fmt.Println("init SendMetrics worker")
 	return func ()  {
 		fmt.Printf("counters length=%d; gauge length=%d\n", len(*counterStorage), len(*gaugeStorage))
 
-		for name, value := range *gaugeStorage {
-			err := send(client, baseURL, "gauge", name, fmt.Sprintf("%f", value))
+		for k, v := range *gaugeStorage {
+			value := float64(v)
+			err := send(client, baseURL, schema.Metrics{ID: k, MType: "gauge", Value: &value})
 			if err == nil {
-				delete(*gaugeStorage, name)
+				delete(*gaugeStorage, k)
 			}
 		}
 
-		for name, value := range *counterStorage {
-			err := send(client, baseURL, "counter", name, fmt.Sprintf("%d", value))
+		for k, v := range *counterStorage {
+			delta := int64(v)
+			err := send(client, baseURL, schema.Metrics{ID: k, MType: "counter", Delta: &delta})
 			if err == nil {
-				delete(*counterStorage, name)
+				delete(*counterStorage, k)
 			}
 		}
 		fmt.Println("All sended")
 	}
 }
 
-func send(client Client, baseURL string, metricType string, name string, value string) error {
-	url := fmt.Sprintf("%s/update/%s/%s/%s", baseURL, metricType, name, value)
-
-	response, err := client.Post(url, "text/plain", http.NoBody)
+func send(client Client, baseURL string, metric schema.Metrics) error {
+	var buf bytes.Buffer
+	if _, err := json.MarshalToWriter(metric, &buf); err != nil {
+		return err
+	}
+	
+	url := baseURL + "/update/"
+	response, err := client.Post(url, "application/json", &buf)
 	if err != nil {
 		fmt.Printf("Error during send request to %s\n", url)
 		return err

@@ -5,18 +5,18 @@ import (
 	"math/rand"
 	"runtime"
 
-	"github.com/novoseltcev/go-course/internal/types"
+	"github.com/novoseltcev/go-course/internal/model"
 )
 
 
-func CollectMetrics(counterStorage *map[string]types.Counter, gaugeStorage *map[string]types.Gauge) func() {
+func CollectMetrics(counterStorage *map[string]model.Counter, gaugeStorage *map[string]model.Gauge) func() {
 	fmt.Println("init CollectMetrics worker")
 	return func () {
 		for k, v := range collectRuntimeMetrics() {
-			(*gaugeStorage)[k] = types.Gauge(v)
+			(*gaugeStorage)[k] = model.Gauge(v)
 		}
 		(*counterStorage)["PollCount"] += 1
-		(*gaugeStorage)["RandomValue"] = types.Gauge(rand.Float64())
+		(*gaugeStorage)["RandomValue"] = model.Gauge(rand.Float64())
 	}
 }
 

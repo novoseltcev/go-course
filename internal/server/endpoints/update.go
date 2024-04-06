@@ -6,11 +6,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/novoseltcev/go-course/internal/types"
+	"github.com/novoseltcev/go-course/internal/model"
 )
 
 
-func UpdateMetric(counterStorage *MetricStorager[types.Counter], gaugeStorage *MetricStorager[types.Gauge]) http.HandlerFunc {
+func UpdateMetric(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricStorager[model.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "metricType")
 		metricName := chi.URLParam(r, "metricName")
@@ -24,7 +24,7 @@ func UpdateMetric(counterStorage *MetricStorager[types.Counter], gaugeStorage *M
 				return
 			}
 			
-			(*gaugeStorage).Update(metricName, types.Gauge(value))
+			(*gaugeStorage).Update(metricName, model.Gauge(value))
 		case "counter":
 			value, err := strconv.ParseInt(metricValue, 10, 64)
 			if err != nil {
@@ -32,7 +32,7 @@ func UpdateMetric(counterStorage *MetricStorager[types.Counter], gaugeStorage *M
 				return
 			}
 
-			(*counterStorage).Update(metricName, types.Counter(value))
+			(*counterStorage).Update(metricName, model.Counter(value))
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return

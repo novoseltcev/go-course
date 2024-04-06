@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/novoseltcev/go-course/internal/types"
+	"github.com/novoseltcev/go-course/internal/model"
 )
 
 type ClientMock struct {}
@@ -18,8 +18,8 @@ func (c ClientMock) Post (string, string, io.Reader) (*http.Response, error) {
 
 
 func TestSendMetrics(t *testing.T) {
-	counterStorage :=  map[string]types.Counter{"SomeCounter": 1}
-	gaugeStorage :=  map[string]types.Gauge{"SomeGauge": 1.0}
+	counterStorage :=  map[string]model.Counter{"SomeCounter": 1}
+	gaugeStorage :=  map[string]model.Gauge{"SomeGauge": 1.0}
 	var client Client = ClientMock{}
 	baseURL := "http://0.0.0.0:8080"
 

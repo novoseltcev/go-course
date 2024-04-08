@@ -1,7 +1,6 @@
 package workers
 
 import (
-	"io"
 	"net/http"
 	"testing"
 
@@ -12,7 +11,7 @@ import (
 
 type ClientMock struct {}
 
-func (c ClientMock) Post (string, string, io.Reader) (*http.Response, error) {
+func (c ClientMock) Do (*http.Request) (*http.Response, error) {
     return &http.Response{}, nil
 }
 

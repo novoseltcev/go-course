@@ -43,7 +43,7 @@ func Logger(handler http.Handler) http.Handler {
 		handler.ServeHTTP(&lw, r)
 		elapsed := time.Since(start)
 		log.Infof("%s %s - %d %dB in %.3fµs", r.Method, r.URL, lw.responseData.status, lw.responseData.size, float64(elapsed) / 1000)
-
 	}
+
 	return http.HandlerFunc(wrapper)
 }

@@ -2,6 +2,7 @@ package workers
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 
 
 type Client interface {
-	Post(string, string, io.Reader) (*http.Response, error)
+	Do(*http.Request) (*http.Response, error)
 }
 
 func SendMetrics(counterStorage * map[string]model.Counter, gaugeStorage * map[string]model.Gauge, client Client, baseURL string) func() {
@@ -41,14 +42,21 @@ func SendMetrics(counterStorage * map[string]model.Counter, gaugeStorage * map[s
 	}
 }
 
-func send(client Client, baseURL string, metric schema.Metrics) error {
-	var buf bytes.Buffer
-	if _, err := json.MarshalToWriter(metric, &buf); err != nil {
+func send(c Client, baseURL string, metric schema.Metrics) error {
+	result, err := json.Marshal(metric); 
+	if err != nil {
 		return err
 	}
-	
+
+	buf := bytes.NewBuffer(nil)
+	zb := gzip.NewWriter(buf)
+	defer zb.Close()
+	if _, err := zb.Write(result); err != nil {
+		return err
+	}
+
 	url := baseURL + "/update/"
-	response, err := client.Post(url, "application/json", &buf)
+	response, err := post(c, url, buf)
 	if err != nil {
 		fmt.Printf("Error during send request to %s\n", url)
 		return err
@@ -64,4 +72,14 @@ func send(client Client, baseURL string, metric schema.Metrics) error {
 
 	fmt.Printf("Sended request to %s with code %s\n", url, response.Status)
 	return nil
+}
+
+func post(c Client, url string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+	return c.Do(req)
 }

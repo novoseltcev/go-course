@@ -12,7 +12,7 @@ import (
 
 func GetRouter(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricStorager[model.Gauge]) http.Handler {
 	r := chi.NewRouter()
-	r.Use(middlewares.Logger)
+	r.Use(middlewares.Gzip, middlewares.Logger)
 
 	r.Post(`/update/{metricType}/{metricName}/{metricValue}`, UpdateMetric(counterStorage, gaugeStorage))
 	r.Get(`/value/{metricType}/{metricName}`, GetOneMetric(counterStorage, gaugeStorage))

@@ -36,7 +36,7 @@ func (s *Server) Start() error {
 
 	go func() {
 		for {
-			time.Sleep(s.config.StoreInterval)
+			time.Sleep(time.Duration(s.config.StoreInterval) * time.Second)
 			s.Backup()
 		}
 	}()
@@ -52,14 +52,10 @@ func (s *Server) Restore() error {
 		return nil
 	}
 
-	fd, err := os.OpenFile(s.config.FileStoragePath, os.O_RDONLY, 0)
+	fd, err := os.OpenFile(s.config.FileStoragePath, os.O_RDONLY, 0666)
 	if os.IsNotExist(err) {
-		fd, err := os.OpenFile(s.config.FileStoragePath, os.O_CREATE, 0)
-		if err != nil {
-			return err
-		}
-		defer fd.Close()
-		return nil
+		_, err := os.OpenFile(s.config.FileStoragePath, os.O_CREATE, 0666)
+		return err
 	}
 	if err != nil {
 		return err
@@ -73,7 +69,7 @@ func (s *Server) Backup() error {
 	if s.config.FileStoragePath == "" {
 		return nil
 	}
-	fd, err := os.OpenFile(s.config.FileStoragePath, os.O_WRONLY | os.O_CREATE, 0)
+	fd, err := os.OpenFile(s.config.FileStoragePath, os.O_WRONLY | os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}

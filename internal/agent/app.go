@@ -32,8 +32,8 @@ func NewAgent(config Config) *Agent {
 }
 
 func (s *Agent) Start() {
-	s.cron.AddFunc(fmt.Sprintf("@every %s", s.config.PollInterval), workers.CollectMetrics(&s.counterStorage, &s.gaugeStorage))
-	s.cron.AddFunc(fmt.Sprintf("@every %s", s.config.ReportInterval), workers.SendMetrics(&s.counterStorage, &s.gaugeStorage, &s.client, "http://" + s.config.Address))
+	s.cron.AddFunc(fmt.Sprintf("@every %ds", s.config.PollInterval), workers.CollectMetrics(&s.counterStorage, &s.gaugeStorage))
+	s.cron.AddFunc(fmt.Sprintf("@every %ds", s.config.ReportInterval), workers.SendMetrics(&s.counterStorage, &s.gaugeStorage, &s.client, "http://" + s.config.Address))
 
 	defer s.cron.Stop()
 	s.cron.Start()

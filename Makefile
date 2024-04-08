@@ -16,4 +16,5 @@ agent: $(AGENT_DIR)/agent
 	$(AGENT_DIR)/agent -a 0.0.0.0:8080 -p 5 -r 5
 
 server: $(SERVER_DIR)/server
-	$(SERVER_DIR)/server -a :8080 -f $(SERVER_DIR)/backup.json -r=false -s 2
+	RESTORE=true STORE_INTERVAL=2 FILE_STORAGE_PATH=$(SERVER_DIR)/backup.json $(SERVER_DIR)/server -a :8080
+

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/caarlos0/env/v10"
 	"github.com/spf13/cobra"
 
@@ -21,7 +19,7 @@ func Cmd() *cobra.Command {
 
 			config := server.Config{
 				Address: address,
-				StoreInterval: time.Duration(storeInterval) * time.Second,
+				StoreInterval: storeInterval,
 				FileStoragePath: fileStoragePath,
 				Restore: restore,
 			}

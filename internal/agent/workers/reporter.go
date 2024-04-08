@@ -50,10 +50,10 @@ func send(c Client, baseURL string, metric schema.Metrics) error {
 
 	buf := bytes.NewBuffer(nil)
 	zb := gzip.NewWriter(buf)
-	defer zb.Close()
 	if _, err := zb.Write(result); err != nil {
 		return err
 	}
+	zb.Close()
 
 	url := baseURL + "/update/"
 	response, err := post(c, url, buf)

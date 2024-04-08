@@ -3,6 +3,7 @@ package endpoints
 import (
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
 	json "github.com/mailru/easyjson"
 
 	"github.com/novoseltcev/go-course/internal/model"
@@ -14,6 +15,7 @@ func GetOneMetricFromJSON(counterStorage *MetricStorager[model.Counter], gaugeSt
 	return func(w http.ResponseWriter, r *http.Request) {
 		var metric schema.Metrics
         if err := json.UnmarshalFromReader(r.Body, &metric); err != nil {
+			log.Warn(err.Error())
             http.Error(w, err.Error(), http.StatusBadRequest)
             return
         }
@@ -22,24 +24,22 @@ func GetOneMetricFromJSON(counterStorage *MetricStorager[model.Counter], gaugeSt
 		switch metric.MType {
 		case "gauge":
 			result := (*gaugeStorage).GetByName(metric.ID)
-			var value float64
 			if result == nil {
-				value = 0
-			} else {
-				value = float64(*result)
+				http.Error(w, "Metric not found", http.StatusNotFound)
+				return
 			}
-			metric.Value = &value
+
+			metric.Value = (*float64)(result)
 		case "counter":
 			result := (*counterStorage).GetByName(metric.ID)
-
-			var value int64
 			if result == nil {
-				value = 0
-			} else {
-				value = int64(*result)
+				http.Error(w, "Metric not found", http.StatusNotFound)
+				return
 			}
-			metric.Delta = &value
+			
+			metric.Delta = (*int64)(result)
 		default:
+			log.Warn(http.StatusText(http.StatusBadRequest))
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}

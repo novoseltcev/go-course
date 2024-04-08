@@ -19,6 +19,9 @@ func Index(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricSt
 		}
 
 		tmpl, _ := template.ParseFiles("templates/index.html")
-        tmpl.Execute(w, data)
+        w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		tmpl.Execute(w, data)
+		
 	}
 }

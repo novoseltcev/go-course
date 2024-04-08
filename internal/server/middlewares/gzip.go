@@ -1,10 +1,10 @@
 package middlewares
 
 import (
-	"compress/gzip"
 	"io"
-	"net/http"
 	"strings"
+	"net/http"
+	"compress/gzip"
 )
 
 type compressReader struct {
@@ -25,7 +25,7 @@ func (c *compressReader) Close() error {
 
 
 type compressWriter struct {
-    writer http.ResponseWriter
+    http.ResponseWriter
     compressor *gzip.Writer
 }
 
@@ -33,22 +33,7 @@ func (c *compressWriter) Write(p []byte) (int, error) {
     return c.compressor.Write(p)
 }
 
-func (c *compressWriter) Header() http.Header {
-    return c.writer.Header()
-}
-
-func (c *compressWriter) WriteHeader(statusCode int) {
-    if statusCode < 300 {
-        c.writer.Header().Set("Content-Encoding", "gzip")
-    }
-    c.writer.WriteHeader(statusCode)
-}
-
-func (c *compressWriter) Close() error {
-    return c.compressor.Close()
-}
-
-func Gzip(handler http.Handler) http.Handler {
+func Gzip(next http.Handler) http.Handler {
     wrapper := func(w http.ResponseWriter, r *http.Request) {        
         
         contentEncoding := r.Header.Get("Content-Encoding")
@@ -58,30 +43,23 @@ func Gzip(handler http.Handler) http.Handler {
                 http.Error(w, err.Error(), http.StatusInternalServerError)
                 return
 			}
-			cr := compressReader{
+			cr := &compressReader{
 				body: r.Body,
 				decompressor: decompressor,
 			}
-            r.Body = &cr
+            r.Body = cr
 			defer cr.Close()
         }
-
-        ow := w
-        acceptEncoding := r.Header.Get("Accept-Encoding")
-        contentType := r.Header.Get("Content-Type")
-        supportGzip := strings.Contains(acceptEncoding, "gzip")
-        compessableType := strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/html")
         
-        if supportGzip && compessableType {
-            cw := &compressWriter{
-                writer:  w,
-                compressor: gzip.NewWriter(w),
-            }
-            ow = cw
-            defer cw.Close()
-        }
+        if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
 
-        handler.ServeHTTP(ow, r)
+        w.Header().Set("Content-Encoding", "gzip")
+        gz := gzip.NewWriter(w)
+        defer gz.Close()
+        next.ServeHTTP(&compressWriter{ResponseWriter: w, compressor: gz}, r)
     }
 
 	return http.HandlerFunc(wrapper)

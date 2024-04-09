@@ -1,10 +1,10 @@
 package endpoints
 
-import "github.com/novoseltcev/go-course/internal/types"
+import "github.com/novoseltcev/go-course/internal/model"
 
 
-type MetricStorager[T types.Counter | types.Gauge] interface {
+type MetricStorager[T model.Counter | model.Gauge] interface {
 	GetByName(string) *T
-	GetAll() []types.Metric[T]
+	GetAll() []model.Metric[T]
 	Update(string, T)
 }

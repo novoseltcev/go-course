@@ -2,8 +2,9 @@ package main
 
 import (
 	"github.com/caarlos0/env/v10"
-	"github.com/novoseltcev/go-course/internal/server"
 	"github.com/spf13/cobra"
+
+	"github.com/novoseltcev/go-course/internal/server"
 )
 
 func Cmd() *cobra.Command {
@@ -12,7 +13,16 @@ func Cmd() *cobra.Command {
 		Short: "Use this command to run server",
 		Run: func(cmd *cobra.Command, args []string) {
 			address, _ := cmd.Flags().GetString("a")
-			config := server.Config{Address: address}
+			storeInterval, _ := cmd.Flags().GetInt("s")
+			fileStoragePath, _ := cmd.Flags().GetString("f")
+			restore, _ := cmd.Flags().GetBool("r")
+
+			config := server.Config{
+				Address: address,
+				StoreInterval: storeInterval,
+				FileStoragePath: fileStoragePath,
+				Restore: restore,
+			}
 			env.Parse(&config)
 	
 			s := server.NewServer(config)
@@ -22,6 +32,10 @@ func Cmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringP("a", "a", ":8080", "Server address")
+	flags := cmd.Flags()
+	flags.StringP("a", "a", ":8080", "Server address")
+	flags.IntP("s", "s", 300, "backup interval")
+	flags.StringP("f", "f", "/tmp/metrics-db.json", "path to backup")
+	flags.BoolP("r", "r", true, "restore from backup after restart")
 	return cmd
 }

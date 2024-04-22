@@ -6,13 +6,13 @@ import (
 	"os"
 	"time"
 
-	_ "github.com/jackc/pgx/v5"
-
 	"github.com/jmoiron/sqlx"
+	_ "github.com/jackc/pgx/v5/stdlib"
+
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/internal/server/storage"
-	
+	"github.com/novoseltcev/go-course/internal/server/storage/mem"
 )
 
 
@@ -34,36 +34,36 @@ func NewServer(config Config) *Server {
 }
 
 func (s *Server) Start() error {
-	db, err := sqlx.Open("pgx", s.config.DatabaseDsn)
-	if err == nil {
+	if s.config.DatabaseDsn != "" {
+		db, err := sqlx.Open("pgx", s.config.DatabaseDsn)
+		if err != nil {
+			return err
+		}
 		defer db.Close()
-	}
-	
+		s.db = db
+		s.CounterStorage, s.GaugeStorage = nil, nil
+	} else {
+		s.CounterStorage, s.GaugeStorage = &mem.Storage[model.Counter]{Metrics: make(map[string]model.Counter)}, &mem.Storage[model.Gauge]{Metrics: make(map[string]model.Gauge)}
+		
+		if err := s.Restore(); err != nil {
+			return err
+		}
 
-	s.CounterStorage, s.GaugeStorage = storage.InitMetricStorages(db)
-
-	if err := s.Restore(); err != nil {
-		return err
-	}
-	
-	if db == nil {
 		go func() {
 			for {
 				time.Sleep(time.Duration(s.config.StoreInterval) * time.Second)
 				s.Backup()
 			}
 		}()
-	}
-	
 
-	if err := http.ListenAndServe(s.config.Address, endpoints.GetRouter(s.db, &s.CounterStorage, &s.GaugeStorage)); err != nil {
-		return err
+		defer s.Backup()
 	}
-	return s.Backup()
+
+	return http.ListenAndServe(s.config.Address, endpoints.GetRouter(s.db, &s.CounterStorage, &s.GaugeStorage))
 }
 
 func (s *Server) Restore() error {
-	if s.db != nil || !s.config.Restore || s.config.FileStoragePath == "" {
+	if !s.config.Restore || s.config.FileStoragePath == "" {
 		return nil
 	}
 
@@ -81,9 +81,10 @@ func (s *Server) Restore() error {
 }
 
 func (s *Server) Backup() error {
-	if s.db != nil || s.config.FileStoragePath == "" {
+	if s.config.FileStoragePath == "" {
 		return nil
 	}
+
 	fd, err := os.OpenFile(s.config.FileStoragePath, os.O_WRONLY | os.O_CREATE, 0666)
 	if err != nil {
 		return err

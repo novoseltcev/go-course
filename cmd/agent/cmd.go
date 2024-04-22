@@ -11,9 +11,10 @@ func Cmd() *cobra.Command {
 		Use:   "agent",
 		Short: "Use this command to run agent",
 		Run: func(cmd *cobra.Command, args []string) {
-			address, _ := cmd.Flags().GetString("a")
-			pollInterval, _ := cmd.Flags().GetInt("p")
-			reportInterval, _ := cmd.Flags().GetInt("r")
+			flags := cmd.Flags()
+			address, _ := flags.GetString("a")
+			pollInterval, _ := flags.GetInt("p")
+			reportInterval, _ := flags.GetInt("r")
 
 			config := agent.Config{
 				Address: address,

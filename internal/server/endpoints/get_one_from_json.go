@@ -3,15 +3,16 @@ package endpoints
 import (
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
 	json "github.com/mailru/easyjson"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/schema"
+	"github.com/novoseltcev/go-course/internal/server/storage"
 )
 
 
-func GetOneMetricFromJSON(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricStorager[model.Gauge]) http.HandlerFunc {
+func GetOneMetricFromJSON(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var metric schema.Metrics
         if err := json.UnmarshalFromReader(r.Body, &metric); err != nil {

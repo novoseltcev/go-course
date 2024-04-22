@@ -8,10 +8,11 @@ import (
 
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/schema"
+	"github.com/novoseltcev/go-course/internal/server/storage"
 )
 
 
-func UpdateMetricFromJSON(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricStorager[model.Gauge]) http.HandlerFunc {
+func UpdateMetricFromJSON(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var metric schema.Metrics
         if err := json.UnmarshalFromReader(r.Body, &metric); err != nil {

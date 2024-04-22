@@ -9,8 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/novoseltcev/go-course/internal/server/storage"
 	"github.com/novoseltcev/go-course/internal/model"
+	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/server/storage/mem"
 )
 
 
@@ -35,8 +36,8 @@ type want[T model.Counter | model.Gauge] struct {
 
 func TestUpdateMetric(t *testing.T) {
 	type args struct {
-		counterStorage storage.MemStorage[model.Counter]
-		gaugeStorage storage.MemStorage[model.Gauge]
+		counterStorage mem.Storage[model.Counter]
+		gaugeStorage mem.Storage[model.Gauge]
 	}
 	type result struct {
 		counter *want[model.Counter]
@@ -53,10 +54,10 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "add new counter",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{
+				counterStorage: mem.Storage[model.Counter]{
 					Metrics: make(map[string]model.Counter),
 				},
-				gaugeStorage: storage.MemStorage[model.Gauge]{
+				gaugeStorage: mem.Storage[model.Gauge]{
 					Metrics: make(map[string]model.Gauge),
 				},
 			},
@@ -73,10 +74,10 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "add new gauge",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{
+				counterStorage: mem.Storage[model.Counter]{
 					Metrics: make(map[string]model.Counter),
 				},
-				gaugeStorage: storage.MemStorage[model.Gauge]{
+				gaugeStorage: mem.Storage[model.Gauge]{
 					Metrics: make(map[string]model.Gauge),
 				},
 			},
@@ -93,10 +94,10 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "add exists counter",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{
+				counterStorage: mem.Storage[model.Counter]{
 					Metrics: map[string]model.Counter{"some": 1},
 				},
-				gaugeStorage: storage.MemStorage[model.Gauge]{
+				gaugeStorage: mem.Storage[model.Gauge]{
 					Metrics: make(map[string]model.Gauge),
 				},
 			},
@@ -113,10 +114,10 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "add exists gauge",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{
+				counterStorage: mem.Storage[model.Counter]{
 					Metrics: make(map[string]model.Counter),
 				},
-				gaugeStorage: storage.MemStorage[model.Gauge]{
+				gaugeStorage: mem.Storage[model.Gauge]{
 					Metrics: map[string]model.Gauge{"some": 11.32},
 				},
 			},
@@ -133,8 +134,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "invalid method",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{Metrics: make(map[string]model.Counter)},
-				gaugeStorage: storage.MemStorage[model.Gauge]{Metrics: make(map[string]model.Gauge)},
+				counterStorage: mem.Storage[model.Counter]{Metrics: make(map[string]model.Counter)},
+				gaugeStorage: mem.Storage[model.Gauge]{Metrics: make(map[string]model.Gauge)},
 			},
 			method: http.MethodGet,
 			url: "/update/gauge/some/123.56",
@@ -144,8 +145,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "miss gauge value",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{},
-				gaugeStorage: storage.MemStorage[model.Gauge]{},
+				counterStorage: mem.Storage[model.Counter]{},
+				gaugeStorage: mem.Storage[model.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/gauge/some",
@@ -155,8 +156,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "miss counter value",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{},
-				gaugeStorage: storage.MemStorage[model.Gauge]{},
+				counterStorage: mem.Storage[model.Counter]{},
+				gaugeStorage: mem.Storage[model.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/counter/some",
@@ -166,8 +167,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "unknown metric type",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{},
-				gaugeStorage: storage.MemStorage[model.Gauge]{},
+				counterStorage: mem.Storage[model.Counter]{},
+				gaugeStorage: mem.Storage[model.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/some/some/1",
@@ -177,8 +178,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "invalid gauge value",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{},
-				gaugeStorage: storage.MemStorage[model.Gauge]{},
+				counterStorage: mem.Storage[model.Counter]{},
+				gaugeStorage: mem.Storage[model.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/gauge/some/value",
@@ -188,8 +189,8 @@ func TestUpdateMetric(t *testing.T) {
 		{
 			name: "invalid counter value",
 			args: args{
-				counterStorage: storage.MemStorage[model.Counter]{},
-				gaugeStorage: storage.MemStorage[model.Gauge]{},
+				counterStorage: mem.Storage[model.Counter]{},
+				gaugeStorage: mem.Storage[model.Gauge]{},
 			},
 			method: http.MethodPost,
 			url: "/update/counter/some/1.",
@@ -200,10 +201,10 @@ func TestUpdateMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			var counterStorage MetricStorager[model.Counter] = &tt.args.counterStorage
-			var gaugeStorage MetricStorager[model.Gauge] = &tt.args.gaugeStorage
+			var counterStorage storage.MetricStorager[model.Counter] = &tt.args.counterStorage
+			var gaugeStorage storage.MetricStorager[model.Gauge] = &tt.args.gaugeStorage
 
-			ts := httptest.NewServer(GetRouter(&counterStorage, &gaugeStorage))
+			ts := httptest.NewServer(GetRouter(nil, &counterStorage, &gaugeStorage))
     		defer ts.Close()
 
 			response, _ := testRequest(t, ts, tt.method, tt.url)

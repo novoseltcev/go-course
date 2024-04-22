@@ -4,13 +4,15 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jmoiron/sqlx"
 
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/server/middlewares"
+	"github.com/novoseltcev/go-course/internal/server/storage"
 )
 
 
-func GetRouter(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricStorager[model.Gauge]) http.Handler {
+func GetRouter(db *sqlx.DB, counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middlewares.Gzip, middlewares.Logger)
 
@@ -18,6 +20,7 @@ func GetRouter(counterStorage *MetricStorager[model.Counter], gaugeStorage *Metr
 	r.Get(`/value/{metricType}/{metricName}`, GetOneMetric(counterStorage, gaugeStorage))
 	r.Post(`/update/`, UpdateMetricFromJSON(counterStorage, gaugeStorage))
 	r.Post(`/value/`, GetOneMetricFromJSON(counterStorage, gaugeStorage))
+	r.Get(`/ping`, Ping(db))
 	r.Get(`/`, Index(counterStorage, gaugeStorage))
 	return r
 }

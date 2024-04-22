@@ -10,10 +10,11 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/novoseltcev/go-course/internal/model"
+	"github.com/novoseltcev/go-course/internal/server/storage"
 )
 
 
-func GetOneMetric(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricStorager[model.Gauge]) http.HandlerFunc {
+func GetOneMetric(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "metricType")
 		metricName := chi.URLParam(r, "metricName")

@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/novoseltcev/go-course/internal/model"
+	"github.com/novoseltcev/go-course/internal/server/storage"
 )
 
 
-func Index(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricStorager[model.Gauge]) http.HandlerFunc {
+func Index(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := struct {
 			CounterMetrics []model.Metric[model.Counter]

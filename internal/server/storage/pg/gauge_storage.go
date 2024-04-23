@@ -30,7 +30,10 @@ func (s *GaugeStorage) GetAll(ctx context.Context) []model.Metric[model.Gauge] {
 	if err != nil {
 		panic(err)
 	}
-
+	if err := rows.Err(); err != nil {
+		panic(err)
+	}
+	
 	var metrics []model.Metric[model.Gauge]
 	for rows.Next() {
 		var metric model.Metric[model.Gauge]

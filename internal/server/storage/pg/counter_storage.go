@@ -30,6 +30,9 @@ func (s *CounterStorage) GetAll(ctx context.Context) []model.Metric[model.Counte
 	if err != nil {
 		panic(err)
 	}
+	if err := rows.Err(); err != nil {
+		panic(err)
+	}
 
 	var metrics []model.Metric[model.Counter]
 	for rows.Next() {

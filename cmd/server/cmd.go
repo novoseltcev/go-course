@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/caarlos0/env/v10"
 	"github.com/spf13/cobra"
 
@@ -30,7 +32,7 @@ func Cmd() *cobra.Command {
 	
 			s := server.NewServer(config)
 			if err := s.Start(); err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 		},
 	}

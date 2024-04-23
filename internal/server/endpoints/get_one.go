@@ -16,19 +16,21 @@ import (
 
 func GetOneMetric(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		metricType := chi.URLParam(r, "metricType")
 		metricName := chi.URLParam(r, "metricName")
 
 		metricValue := ""
 		switch metricType {
 		case "gauge":
-			result := (*gaugeStorage).GetByName(metricName)
+			result := (*gaugeStorage).GetByName(ctx, metricName)
 			if result == nil {
 				break
 			}
 			metricValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", float64(*result)), "0"), ".")
 		case "counter":
-			result := (*counterStorage).GetByName(metricName)
+			result := (*counterStorage).GetByName(ctx, metricName)
 			if result == nil {
 				break
 			}

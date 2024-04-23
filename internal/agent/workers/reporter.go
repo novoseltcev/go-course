@@ -33,10 +33,7 @@ func SendMetrics(counterStorage * map[string]model.Counter, gaugeStorage * map[s
 
 		for k, v := range *counterStorage {
 			delta := int64(v)
-			err := send(client, baseURL, schema.Metrics{ID: k, MType: "counter", Delta: &delta})
-			if err == nil {
-				delete(*counterStorage, k)
-			}
+			send(client, baseURL, schema.Metrics{ID: k, MType: "counter", Delta: &delta})
 		}
 		fmt.Println("All sended")
 	}

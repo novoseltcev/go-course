@@ -14,6 +14,8 @@ import (
 
 func GetOneMetricFromJSON(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		var metric schema.Metrics
         if err := json.UnmarshalFromReader(r.Body, &metric); err != nil {
 			log.Warn(err.Error())
@@ -24,7 +26,7 @@ func GetOneMetricFromJSON(counterStorage *storage.MetricStorager[model.Counter],
 		w.Header().Set("Content-Type", "application/json")
 		switch metric.MType {
 		case "gauge":
-			result := (*gaugeStorage).GetByName(metric.ID)
+			result := (*gaugeStorage).GetByName(ctx, metric.ID)
 			if result == nil {
 				http.Error(w, "Metric not found", http.StatusNotFound)
 				return
@@ -32,7 +34,7 @@ func GetOneMetricFromJSON(counterStorage *storage.MetricStorager[model.Counter],
 
 			metric.Value = (*float64)(result)
 		case "counter":
-			result := (*counterStorage).GetByName(metric.ID)
+			result := (*counterStorage).GetByName(ctx, metric.ID)
 			if result == nil {
 				http.Error(w, "Metric not found", http.StatusNotFound)
 				return

@@ -11,12 +11,14 @@ import (
 
 func Index(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+	
 		data := struct {
 			CounterMetrics []model.Metric[model.Counter]
 			GaugeMetrics []model.Metric[model.Gauge]
 		}{
-			CounterMetrics: (*counterStorage).GetAll(),
-			GaugeMetrics: (*gaugeStorage).GetAll(),
+			CounterMetrics: (*counterStorage).GetAll(ctx),
+			GaugeMetrics: (*gaugeStorage).GetAll(ctx),
 		}
 
 		tmpl, _ := template.ParseFiles("templates/index.html")

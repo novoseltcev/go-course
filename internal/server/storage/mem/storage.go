@@ -1,6 +1,7 @@
 package mem
 
 import (
+	"context"
 	"sort"
 
 	"github.com/novoseltcev/go-course/internal/model"
@@ -10,7 +11,7 @@ type Storage[T model.Counter | model.Gauge] struct {
 	Metrics map[string]T
 }
 
-func (s *Storage[T]) GetAll() []model.Metric[T] {
+func (s *Storage[T]) GetAll(ctx context.Context) []model.Metric[T] {
 	names := make([]string, 0, len(s.Metrics))
 	for name := range s.Metrics {
 		names = append(names, name)
@@ -25,7 +26,7 @@ func (s *Storage[T]) GetAll() []model.Metric[T] {
 	return result
 }
 
-func (s *Storage[T]) Update(name string, value T) {
+func (s *Storage[T]) Update(ctx context.Context, name string, value T) {
 	switch any(value).(type) {
 	case model.Counter:
 		s.Metrics[name] = s.Metrics[name] + value
@@ -34,7 +35,7 @@ func (s *Storage[T]) Update(name string, value T) {
 	}
 }
 
-func (s Storage[T]) GetByName(name string) *T {
+func (s Storage[T]) GetByName(ctx context.Context, name string) *T {
 	result, ok := s.Metrics[name]
 	if !ok {
 		return nil

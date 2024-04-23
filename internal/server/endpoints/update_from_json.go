@@ -14,6 +14,8 @@ import (
 
 func UpdateMetricFromJSON(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		var metric schema.Metrics
         if err := json.UnmarshalFromReader(r.Body, &metric); err != nil {
 			log.Error(err.Error())
@@ -28,14 +30,14 @@ func UpdateMetricFromJSON(counterStorage *storage.MetricStorager[model.Counter],
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}
-			(*gaugeStorage).Update(metric.ID, model.Gauge(*metric.Value))
+			(*gaugeStorage).Update(ctx, metric.ID, model.Gauge(*metric.Value))
 		case "counter":
 			if metric.Delta == nil {
 				log.Error("counter metric has nil delta")
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
             	return
 			}
-			(*counterStorage).Update(metric.ID, model.Counter(*metric.Delta))
+			(*counterStorage).Update(ctx, metric.ID, model.Counter(*metric.Delta))
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return

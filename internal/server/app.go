@@ -6,13 +6,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
+	"github.com/golang-migrate/migrate/database/postgres"
+	"github.com/golang-migrate/migrate"
+	_ "github.com/golang-migrate/migrate/source/file"
 
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/internal/server/storage"
 	"github.com/novoseltcev/go-course/internal/server/storage/mem"
+	"github.com/novoseltcev/go-course/internal/server/storage/pg"
 )
 
 
@@ -41,7 +45,17 @@ func (s *Server) Start() error {
 		}
 		defer db.Close()
 		s.db = db
-		s.CounterStorage, s.GaugeStorage = nil, nil
+		s.CounterStorage, s.GaugeStorage = &pg.CounterStorage{DB: db}, &pg.GaugeStorage{DB: db}
+
+		driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+		if err != nil {
+			return err
+		}
+		m, err := migrate.NewWithDatabaseInstance("file://./migrations", "postgres", driver)
+		if err != nil {
+			return err
+		}
+		m.Up()
 	} else {
 		s.CounterStorage, s.GaugeStorage = &mem.Storage[model.Counter]{Metrics: make(map[string]model.Counter)}, &mem.Storage[model.Gauge]{Metrics: make(map[string]model.Gauge)}
 		

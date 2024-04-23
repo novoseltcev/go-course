@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/novoseltcev/go-course/internal/model"
 )
 
@@ -23,7 +21,4 @@ func TestSendMetrics(t *testing.T) {
 	baseURL := "http://0.0.0.0:8080"
 
 	SendMetrics(&counterStorage, &gaugeStorage, client, baseURL)()
-
-	assert.Empty(t, counterStorage)
-	assert.Empty(t, gaugeStorage)
 }

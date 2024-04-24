@@ -50,15 +50,15 @@ func (s *Storage) GetAll(ctx context.Context) ([]model.Metric, error) {
 }
 
 func (s *Storage) Save(ctx context.Context, metric model.Metric) error {
-	_, err := s.DB.ExecContext(
-		ctx,
-		`INSERT INTO metrics (name, type, value, delta, ) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = EXCLUDED.value, delta = metrics.delta + EXCLUDED.delta`,
-		metric.Name,
-		metric.Type,
-		metric.Value,
-		metric.Delta,
-	)
-	return err
+	stmt, err := s.DB.PrepareContext(ctx, `INSERT INTO metrics (name, type, value, delta) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = EXCLUDED.value, delta = metrics.delta + EXCLUDED.delta`)
+	if err != nil {
+		return err
+	}
+
+	if _, err := stmt.ExecContext(ctx, metric.Name, metric.Type, metric.Value, metric.Delta); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Storage) SaveAll(ctx context.Context, metrics []model.Metric) error {
@@ -66,16 +66,14 @@ func (s *Storage) SaveAll(ctx context.Context, metrics []model.Metric) error {
 	if err != nil {
 		return err
 	}
-	
+
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO metrics (name, type, value, delta) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = EXCLUDED.value, delta = metrics.delta + EXCLUDED.delta`)
+	if err != nil {
+		return err
+	}
+
 	for _, metric := range metrics {
-		_, err := tx.ExecContext(
-			ctx,
-			`INSERT INTO metrics (name, type, value, delta) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = EXCLUDED.value, delta = metrics.delta + EXCLUDED.delta`,
-			metric.Name,
-			metric.Type,
-			metric.Value,
-			metric.Delta,
-		)
+		_, err := stmt.ExecContext(ctx, metric.Name, metric.Type, metric.Value, metric.Delta)
 		if err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
 				return errors.Join(err, rollbackErr)

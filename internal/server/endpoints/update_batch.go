@@ -48,10 +48,14 @@ func UpdateMetricsBatch(storage *storage.MetricStorager) http.HandlerFunc {
 				return
 			}
 		}
-		if err := (*storage).SaveAll(ctx, batch); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+
+		if len(batch) != 0 {
+			if err := (*storage).SaveAll(ctx, batch); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
+		
 		w.WriteHeader(http.StatusOK)
 	}
 }

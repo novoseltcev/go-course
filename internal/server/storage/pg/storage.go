@@ -52,7 +52,7 @@ func (s *Storage) GetAll(ctx context.Context) ([]model.Metric, error) {
 func (s *Storage) Save(ctx context.Context, metric model.Metric) error {
 	_, err := s.DB.ExecContext(
 		ctx,
-		`INSERT INTO metrics (name, type, value, delta, ) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = EXCLUDED.value, delta = EXCLUDED.delta`,
+		`INSERT INTO metrics (name, type, value, delta, ) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = EXCLUDED.value, delta = metrics.delta + EXCLUDED.delta`,
 		metric.Name,
 		metric.Type,
 		metric.Value,
@@ -70,7 +70,7 @@ func (s *Storage) SaveAll(ctx context.Context, metrics []model.Metric) error {
 	for _, metric := range metrics {
 		_, err := tx.ExecContext(
 			ctx,
-			`INSERT INTO metrics (name, type, value, delta) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = EXCLUDED.value, delta = EXCLUDED.delta`,
+			`INSERT INTO metrics (name, type, value, delta) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = EXCLUDED.value, delta = metrics.delta + EXCLUDED.delta`,
 			metric.Name,
 			metric.Type,
 			metric.Value,

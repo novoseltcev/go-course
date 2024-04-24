@@ -41,7 +41,12 @@ func (s *Storage) GetAll(ctx context.Context) ([]model.Metric, error) {
 }
 
 func (s *Storage) Save(ctx context.Context, metric model.Metric) error {
-	s.Metrics[metric.Type][metric.Name] = metric
+	saved, ok := s.Metrics[metric.Type][metric.Name]
+	if metric.Type == "counter" && ok && saved.Delta != nil {
+		*saved.Delta += *metric.Delta
+	} else {
+		s.Metrics[metric.Type][metric.Name] = metric
+	}
 	return nil
 }
 

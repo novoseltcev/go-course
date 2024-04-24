@@ -7,8 +7,9 @@ import (
 )
 
 
-type MetricStorager[T model.Counter | model.Gauge] interface {
-	GetByName(context.Context, string) *T
-	GetAll(context.Context) []model.Metric[T]
-	Update(context.Context, string, T)
+type MetricStorager interface {
+	GetByName(ctx context.Context, name, Type string) (*model.Metric, error)
+	GetAll(ctx context.Context) ([]model.Metric, error)
+	Save(ctx context.Context, metric model.Metric) error
+	SaveAll(ctx context.Context, metrics []model.Metric) error
 }

@@ -9,7 +9,6 @@ import (
 
 	json "github.com/mailru/easyjson"
 
-	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/schema"
 )
 
@@ -18,29 +17,28 @@ type Client interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-func SendMetrics(counterStorage * map[string]model.Counter, gaugeStorage * map[string]model.Gauge, client Client, baseURL string) func() {
+func SendMetrics(counterStorage * map[string]int64, gaugeStorage * map[string]float64, client Client, baseURL string) func() {
 	fmt.Println("init SendMetrics worker")
 	return func ()  {
 		fmt.Printf("counters length=%d; gauge length=%d\n", len(*counterStorage), len(*gaugeStorage))
-
+		var metrics []schema.Metrics
 		for k, v := range *gaugeStorage {
 			value := float64(v)
-			err := send(client, baseURL, schema.Metrics{ID: k, MType: "gauge", Value: &value})
-			if err == nil {
-				delete(*gaugeStorage, k)
-			}
+			metrics = append(metrics, schema.Metrics{ID: k, MType: "gauge", Value: &value})
 		}
 
 		for k, v := range *counterStorage {
 			delta := int64(v)
-			send(client, baseURL, schema.Metrics{ID: k, MType: "counter", Delta: &delta})
+			metrics = append(metrics, schema.Metrics{ID: k, MType: "counter", Delta: &delta})
 		}
+
+		send(client, baseURL, metrics)
 		fmt.Println("All sended")
 	}
 }
 
-func send(c Client, baseURL string, metric schema.Metrics) error {
-	result, err := json.Marshal(metric); 
+func send(c Client, baseURL string, metrics []schema.Metrics) error {
+	result, err := json.Marshal(schema.MetricsList{Metrics: metrics}); 
 	if err != nil {
 		return err
 	}
@@ -52,7 +50,7 @@ func send(c Client, baseURL string, metric schema.Metrics) error {
 	}
 	zb.Close()
 
-	url := baseURL + "/update/"
+	url := baseURL + "/updates/"
 	response, err := post(c, url, buf)
 	if err != nil {
 		fmt.Printf("Error during send request to %s\n", url)

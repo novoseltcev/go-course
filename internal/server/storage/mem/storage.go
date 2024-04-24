@@ -7,39 +7,47 @@ import (
 	"github.com/novoseltcev/go-course/internal/model"
 )
 
-type Storage[T model.Counter | model.Gauge] struct {
-	Metrics map[string]T
+type Storage struct {
+	Metrics map[string]map[string]model.Metric
 }
 
-func (s *Storage[T]) GetAll(ctx context.Context) []model.Metric[T] {
-	names := make([]string, 0, len(s.Metrics))
-	for name := range s.Metrics {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	result := make([]model.Metric[T], 0, len(s.Metrics))
-	for _, name := range names {
-		result = append(result, model.Metric[T]{Name: name, Value: s.Metrics[name]})
-	}
-
-	return result
-}
-
-func (s *Storage[T]) Update(ctx context.Context, name string, value T) {
-	switch any(value).(type) {
-	case model.Counter:
-		s.Metrics[name] = s.Metrics[name] + value
-	case model.Gauge:
-		s.Metrics[name] = value
-	}
-}
-
-func (s Storage[T]) GetByName(ctx context.Context, name string) *T {
-	result, ok := s.Metrics[name]
+func (s Storage) GetByName(ctx context.Context, name, Type string) (*model.Metric, error) {
+	result, ok := s.Metrics[Type][name]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
-	return &result
+	return &result, nil
+}
+
+func (s *Storage) GetAll(ctx context.Context) ([]model.Metric, error) {
+	result := make([]model.Metric, 0)
+
+	for Type := range s.Metrics {
+		data := s.Metrics[Type]
+
+		names := make([]string, 0, len(data))
+		for name := range data {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+
+		for _, name := range names {
+			result = append(result, data[name])
+		}
+	}
+	
+	return result, nil
+}
+
+func (s *Storage) Save(ctx context.Context, metric model.Metric) error {
+	s.Metrics[metric.Type][metric.Name] = metric
+	return nil
+}
+
+func (s *Storage) SaveAll(ctx context.Context, metrics []model.Metric) error {
+	for _, metric := range metrics {
+		s.Save(ctx, metric)
+	}
+	return nil
 }

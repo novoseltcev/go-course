@@ -2,15 +2,16 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/golang-migrate/migrate"
+	"github.com/golang-migrate/migrate/database/postgres"
+	_ "github.com/golang-migrate/migrate/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
-	"github.com/golang-migrate/migrate/database/postgres"
-	"github.com/golang-migrate/migrate"
-	_ "github.com/golang-migrate/migrate/source/file"
 
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
@@ -23,8 +24,7 @@ import (
 type Server struct {
 	config Config
 	db *sqlx.DB
-	CounterStorage storage.MetricStorager[model.Counter]	`json:"counter"`
-	GaugeStorage storage.MetricStorager[model.Gauge]		`json:"gauge"`
+	MetricStorage storage.MetricStorager `json:"storage"`
 }
 
 
@@ -32,8 +32,7 @@ func NewServer(config Config) *Server {
 	return &Server{
 		config: config,
 		db: nil,
-		CounterStorage: nil,
-		GaugeStorage: nil,
+		MetricStorage: nil,
 	}
 }
 
@@ -45,7 +44,7 @@ func (s *Server) Start() error {
 		}
 		defer db.Close()
 		s.db = db
-		s.CounterStorage, s.GaugeStorage = &pg.CounterStorage{DB: db}, &pg.GaugeStorage{DB: db}
+		s.MetricStorage = &pg.Storage{DB: db}
 
 		driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 		if err != nil {
@@ -55,9 +54,17 @@ func (s *Server) Start() error {
 		if err != nil {
 			return err
 		}
-		m.Up()
+		if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+			if downErr := m.Down(); downErr != nil {
+				return errors.Join(err, downErr)
+			}
+			return err
+		}
 	} else {
-		s.CounterStorage, s.GaugeStorage = &mem.Storage[model.Counter]{Metrics: make(map[string]model.Counter)}, &mem.Storage[model.Gauge]{Metrics: make(map[string]model.Gauge)}
+		mapStorage := make(map[string]map[string]model.Metric)
+		mapStorage["counter"] = make(map[string]model.Metric)
+		mapStorage["gauge"] = make(map[string]model.Metric)
+		s.MetricStorage = &mem.Storage{Metrics: mapStorage}
 		
 		if err := s.Restore(); err != nil {
 			return err
@@ -73,7 +80,7 @@ func (s *Server) Start() error {
 		defer s.Backup()
 	}
 
-	return http.ListenAndServe(s.config.Address, endpoints.GetRouter(s.db, &s.CounterStorage, &s.GaugeStorage))
+	return http.ListenAndServe(s.config.Address, endpoints.GetRouter(s.db, &s.MetricStorage))
 }
 
 func (s *Server) Restore() error {

@@ -11,7 +11,7 @@ import (
 )
 
 
-func UpdateMetric(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
+func UpdateMetric(storage *storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		
@@ -27,7 +27,10 @@ func UpdateMetric(counterStorage *storage.MetricStorager[model.Counter], gaugeSt
 				return
 			}
 			
-			(*gaugeStorage).Update(ctx, metricName, model.Gauge(value))
+			if err := (*storage).Save(ctx, model.Metric{Name: metricName, Type: metricType, Value: &value}); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		case "counter":
 			value, err := strconv.ParseInt(metricValue, 10, 64)
 			if err != nil {
@@ -35,7 +38,10 @@ func UpdateMetric(counterStorage *storage.MetricStorager[model.Counter], gaugeSt
 				return
 			}
 
-			(*counterStorage).Update(ctx, metricName, model.Counter(value))
+			if err := (*storage).Save(ctx, model.Metric{Name: metricName, Type: metricType, Delta: &value}); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return

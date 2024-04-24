@@ -1,9 +1,8 @@
 package model
 
-type Counter int64
-type Gauge float64
-
-type Metric[T Counter | Gauge] struct {
+type Metric struct {
 	Name string
-	Value T
+	Type string
+	Value *float64
+	Delta *int64
 }

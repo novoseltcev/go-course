@@ -1,0 +1,17 @@
+version: "3.7"
+services:
+  pg:
+    image: postgres:14
+    volumes: 
+      - pg_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test
+    
+    ports:
+      - ${POSTGRES_PORT:-5432}:5432
+
+volumes:
+  pg_data:

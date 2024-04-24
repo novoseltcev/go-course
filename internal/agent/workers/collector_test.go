@@ -5,14 +5,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/novoseltcev/go-course/internal/model"
 )
 
 
 func TestCollectMetricsToEmptyStorage(t *testing.T) {
-	counterStorage := make(map[string]model.Counter)
-	gaugeStorage := make(map[string]model.Gauge)
+	counterStorage := make(map[string]int64)
+	gaugeStorage := make(map[string]float64)
 
 	require.Empty(t, gaugeStorage)
 	require.Empty(t, counterStorage)
@@ -59,14 +57,14 @@ func TestCollectMetricsToEmptyStorage(t *testing.T) {
 
 	require.Len(t, counterStorage, 1)
 	require.Contains(t, counterStorage, "PollCount")
-	assert.Equal(t, model.Counter(1), counterStorage["PollCount"])
+	assert.Equal(t, int64(1), counterStorage["PollCount"])
 }
 
 
 func TestCollectMetricsToFullStorage(t *testing.T) {
-	var pollCount model.Counter = 1
-	counterStorage := map[string]model.Counter{"PollCount": pollCount}
-	gaugeStorage := map[string]model.Gauge{
+	var pollCount int64 = 1
+	counterStorage := map[string]int64{"PollCount": pollCount}
+	gaugeStorage := map[string]float64{
 		"Alloc": 0.0,
 		"BuckHashSys": 0.0,
 		"Frees": 0.0,

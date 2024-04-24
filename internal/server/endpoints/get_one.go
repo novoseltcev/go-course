@@ -9,12 +9,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/server/storage"
 )
 
 
-func GetOneMetric(counterStorage *storage.MetricStorager[model.Counter], gaugeStorage *storage.MetricStorager[model.Gauge]) http.HandlerFunc {
+func GetOneMetric(storage *storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -24,17 +23,26 @@ func GetOneMetric(counterStorage *storage.MetricStorager[model.Counter], gaugeSt
 		metricValue := ""
 		switch metricType {
 		case "gauge":
-			result := (*gaugeStorage).GetByName(ctx, metricName)
-			if result == nil {
-				break
+			result, err := (*storage).GetByName(ctx, metricName, metricType)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
-			metricValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", float64(*result)), "0"), ".")
+
+			if result != nil {
+				metricValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", *result.Value), "0"), ".")
+			}
 		case "counter":
-			result := (*counterStorage).GetByName(ctx, metricName)
-			if result == nil {
-				break
+			result, err := (*storage).GetByName(ctx, metricName, metricType)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
-			metricValue = strconv.Itoa(int(*result))
+
+			if result != nil {
+				metricValue = strconv.Itoa(int(*result.Delta))
+			}
+
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return

@@ -34,10 +34,10 @@ func TestUpdateMetric(t *testing.T) {
 	metrics := make(map[string]map[string]model.Metric)
 	metrics["counter"] = make(map[string]model.Metric)
 	metrics["gauge"] = make(map[string]model.Metric)
-	var counterValue int64 = 1
-	var gaugeValue float64 = 123.56
-	var newCounterValue int64 = 20
-	var newGaugeValue float64 = 234.
+	var counterValue = int64(1)
+	var gaugeValue = float64(123.56)
+	var newCounterValue = int64(3)
+	var newGaugeValue = float64(234.)
 
 	tests := []struct {
 		name string
@@ -68,7 +68,7 @@ func TestUpdateMetric(t *testing.T) {
 			name: "add exists counter",
 			storage: mem.Storage{Metrics: metrics},
 			method: http.MethodPost,
-			url: "/update/counter/some/20",
+			url: "/update/counter/some/2",
 			status: http.StatusOK,
 			want: &model.Metric{Name: "some", Type: "counter", Delta: &newCounterValue},
 		},

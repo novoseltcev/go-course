@@ -15,7 +15,7 @@ import (
 )
 
 
-func GetOneMetric(storage *storage.MetricStorager) http.HandlerFunc {
+func GetOneMetric(storage storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -26,7 +26,7 @@ func GetOneMetric(storage *storage.MetricStorager) http.HandlerFunc {
 		switch metricType {
 		case "gauge":
 			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
-				return (*storage).GetByName(ctx, metricName, metricType)
+				return storage.GetByName(ctx, metricName, metricType)
 			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -38,7 +38,7 @@ func GetOneMetric(storage *storage.MetricStorager) http.HandlerFunc {
 			}
 		case "counter":
 			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
-				return (*storage).GetByName(ctx, metricName, metricType)
+				return storage.GetByName(ctx, metricName, metricType)
 			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

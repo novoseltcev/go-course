@@ -13,7 +13,7 @@ import (
 )
 
 
-func GetOneMetricFromJSON(storage *storage.MetricStorager) http.HandlerFunc {
+func GetOneMetricFromJSON(storage storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -28,7 +28,7 @@ func GetOneMetricFromJSON(storage *storage.MetricStorager) http.HandlerFunc {
 		switch metric.MType {
 		case "gauge":
 			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
-				return (*storage).GetByName(ctx, metric.ID, metric.MType)
+				return storage.GetByName(ctx, metric.ID, metric.MType)
 			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -43,7 +43,7 @@ func GetOneMetricFromJSON(storage *storage.MetricStorager) http.HandlerFunc {
 			metric.Value = result.Value
 		case "counter":
 			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
-				return (*storage).GetByName(ctx, metric.ID, metric.MType)
+				return storage.GetByName(ctx, metric.ID, metric.MType)
 			})
 
 			if err != nil {

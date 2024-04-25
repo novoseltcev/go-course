@@ -12,4 +12,6 @@ type MetricStorager interface {
 	GetAll(ctx context.Context) ([]model.Metric, error)
 	Save(ctx context.Context, metric model.Metric) error
 	SaveAll(ctx context.Context, metrics []model.Metric) error
+	Ping(ctx context.Context) error
+	Close() error
 }

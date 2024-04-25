@@ -13,7 +13,7 @@ import (
 )
 
 
-func UpdateMetricsBatch(storage *storage.MetricStorager) http.HandlerFunc {
+func UpdateMetricsBatch(storage storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -52,7 +52,7 @@ func UpdateMetricsBatch(storage *storage.MetricStorager) http.HandlerFunc {
 
 		if len(batch) != 0 {
 			err := utils.RetryPgExec(ctx, func() error {
-				return (*storage).SaveAll(ctx, batch)
+				return storage.SaveAll(ctx, batch)
 			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

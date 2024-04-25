@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -31,17 +32,15 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 
 
 func TestUpdateMetric(t *testing.T) {
-	metrics := make(map[string]map[string]model.Metric)
-	metrics["counter"] = make(map[string]model.Metric)
-	metrics["gauge"] = make(map[string]model.Metric)
 	var counterValue = int64(1)
 	var gaugeValue = float64(123.56)
 	var newCounterValue = int64(3)
 	var newGaugeValue = float64(234.)
+	sharedStorage := mem.New()
 
 	tests := []struct {
 		name string
-		storage mem.Storage
+		storage storage.MetricStorager
 		method string
 		url string
 		status int
@@ -50,7 +49,7 @@ func TestUpdateMetric(t *testing.T) {
 	}{
 		{
 			name: "add new counter",
-			storage: mem.Storage{Metrics: metrics},
+			storage: sharedStorage,
 			method: http.MethodPost,
 			url: "/update/counter/some/1",
 			status: http.StatusOK,
@@ -58,7 +57,7 @@ func TestUpdateMetric(t *testing.T) {
 		},
 		{
 			name: "add new gauge",
-			storage: mem.Storage{Metrics: metrics},
+			storage: sharedStorage,
 			method: http.MethodPost,
 			url: "/update/gauge/some/123.56",
 			status: http.StatusOK,
@@ -66,7 +65,7 @@ func TestUpdateMetric(t *testing.T) {
 		},
 		{
 			name: "add exists counter",
-			storage: mem.Storage{Metrics: metrics},
+			storage: sharedStorage,
 			method: http.MethodPost,
 			url: "/update/counter/some/2",
 			status: http.StatusOK,
@@ -74,7 +73,7 @@ func TestUpdateMetric(t *testing.T) {
 		},
 		{
 			name: "add exists gauge",
-			storage: mem.Storage{Metrics: metrics},
+			storage: sharedStorage,
 			method: http.MethodPost,
 			url: "/update/gauge/some/234",
 			status: http.StatusOK,
@@ -82,42 +81,36 @@ func TestUpdateMetric(t *testing.T) {
 		},
 		{
 			name: "invalid method",
-			storage: mem.Storage{},
 			method: http.MethodGet,
 			url: "/update/gauge/some/123.56",
 			status: http.StatusMethodNotAllowed,
 		},
 		{
 			name: "miss gauge value",
-			storage: mem.Storage{},
 			method: http.MethodPost,
 			url: "/update/gauge/some",
 			status: http.StatusNotFound,
 		},
 		{
 			name: "miss counter value",
-			storage: mem.Storage{},
 			method: http.MethodPost,
 			url: "/update/counter/some",
 			status: http.StatusNotFound,
 		},
 		{
 			name: "unknown metric type",
-			storage: mem.Storage{},
 			method: http.MethodPost,
 			url: "/update/some/some/1",
 			status: http.StatusBadRequest,
 		},
 		{
 			name: "invalid gauge value",
-			storage: mem.Storage{},
 			method: http.MethodPost,
 			url: "/update/gauge/some/value",
 			status: http.StatusBadRequest,
 		},
 		{
 			name: "invalid counter value",
-			storage: mem.Storage{},
 			method: http.MethodPost,
 			url: "/update/counter/some/1.",
 			status: http.StatusBadRequest,
@@ -125,10 +118,7 @@ func TestUpdateMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			var storage storage.MetricStorager = &tt.storage
-
-			ts := httptest.NewServer(GetRouter(nil, &storage))
+			ts := httptest.NewServer(GetRouter(tt.storage))
     		defer ts.Close()
 
 			response, _ := testRequest(t, ts, tt.method, tt.url)
@@ -139,10 +129,10 @@ func TestUpdateMetric(t *testing.T) {
 			if tt.want != nil {
 				require.Equal(t, http.StatusOK, response.StatusCode)
 				metric := *tt.want
-				metrics := tt.storage.Metrics[metric.Type]
-				require.Len(t, metrics, 1)
-				require.Contains(t, metrics, metric.Name)
-				assert.Equal(t, metric, metrics[metric.Name])
+				m, err := tt.storage.GetByName(context.TODO(), metric.Name, metric.Type)
+				require.NoError(t, err, "Ошибка получения метрики из хранилища")
+				require.NotNil(t, m, "Метрика не найдена")
+				assert.Equal(t, metric, *m, "Отправленная и полученная метрики не равны")
 			}
 		})
 	}

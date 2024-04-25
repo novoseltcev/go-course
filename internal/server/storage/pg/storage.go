@@ -5,17 +5,46 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/golang-migrate/migrate"
+	"github.com/golang-migrate/migrate/database/postgres"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/novoseltcev/go-course/internal/model"
+	s "github.com/novoseltcev/go-course/internal/server/storage"
 )
 
 
-type Storage struct {
+type storage struct {
 	DB *sqlx.DB
 }
 
-func (s *Storage) GetByName(ctx context.Context, name, Type string) (*model.Metric, error) {
+
+
+func New(URL string) (s.MetricStorager, error) {
+	db, err := sqlx.Open("pgx", URL)
+	if err != nil {
+		return nil, err
+	}
+	
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+	if err != nil {
+		return nil, err
+	}
+	m, err := migrate.NewWithDatabaseInstance("file://./migrations", "postgres", driver)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		if downErr := m.Down(); downErr != nil {
+			return nil, errors.Join(err, downErr)
+		}
+		return nil, err
+	}
+
+	return &storage{DB: db}, nil
+}
+
+func (s *storage) GetByName(ctx context.Context, name, Type string) (*model.Metric, error) {
 	var result model.Metric
 	err := s.DB.GetContext(ctx, &result, "SELECT name, type, value, delta FROM metrics WHERE type = $1 AND name = $2", Type, name)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -24,13 +53,13 @@ func (s *Storage) GetByName(ctx context.Context, name, Type string) (*model.Metr
 	return &result, err
 }
 
-func (s *Storage) GetAll(ctx context.Context) ([]model.Metric, error) {
+func (s *storage) GetAll(ctx context.Context) ([]model.Metric, error) {
 	var metrics []model.Metric
 	err := s.DB.SelectContext(ctx, &metrics, "SELECT name, type, value, delta FROM metrics")
 	return metrics, err
 }
 
-func (s *Storage) Save(ctx context.Context, metric model.Metric) error {
+func (s *storage) Save(ctx context.Context, metric model.Metric) error {
 	stmt, err := s.DB.PrepareContext(ctx, `INSERT INTO metrics (name, type, value, delta) VALUES ($1, $2, $3, $4) ON CONFLICT (name, type) DO UPDATE SET value = EXCLUDED.value, delta = metrics.delta + EXCLUDED.delta`)
 	if err != nil {
 		return err
@@ -42,7 +71,7 @@ func (s *Storage) Save(ctx context.Context, metric model.Metric) error {
 	return nil
 }
 
-func (s *Storage) SaveAll(ctx context.Context, metrics []model.Metric) error {
+func (s *storage) SaveAll(ctx context.Context, metrics []model.Metric) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -64,4 +93,13 @@ func (s *Storage) SaveAll(ctx context.Context, metrics []model.Metric) error {
 	}
 
 	return tx.Commit()
+}
+
+func (s *storage) Ping(ctx context.Context) error {
+	return s.DB.PingContext(ctx)
+}
+
+
+func (s *storage) Close() error {
+	return s.DB.Close()
 }

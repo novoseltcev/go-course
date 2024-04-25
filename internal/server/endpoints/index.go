@@ -11,12 +11,12 @@ import (
 )
 
 
-func Index(storage *storage.MetricStorager) http.HandlerFunc {
+func Index(storage storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		
 		metrics, err := utils.RetryPgSelect(ctx, func() ([]model.Metric, error) {
-			return (*storage).GetAll(ctx)
+			return storage.GetAll(ctx)
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

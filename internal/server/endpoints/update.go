@@ -12,7 +12,7 @@ import (
 )
 
 
-func UpdateMetric(storage *storage.MetricStorager) http.HandlerFunc {
+func UpdateMetric(storage storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		
@@ -44,7 +44,7 @@ func UpdateMetric(storage *storage.MetricStorager) http.HandlerFunc {
 		}
 
 		err := utils.RetryPgExec(ctx, func() error {
-			return (*storage).Save(ctx, metric)
+			return storage.Save(ctx, metric)
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

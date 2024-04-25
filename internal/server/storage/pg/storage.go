@@ -17,7 +17,7 @@ type Storage struct {
 
 func (s *Storage) GetByName(ctx context.Context, name, Type string) (*model.Metric, error) {
 	var result model.Metric
-	err := s.DB.Get(&result, "SELECT name, type, value, delta FROM metrics WHERE type = $1 AND name = $2", Type, name)
+	err := s.DB.GetContext(ctx, &result, "SELECT name, type, value, delta FROM metrics WHERE type = $1 AND name = $2", Type, name)
 	if errors.Is(err, sql.ErrNoRows) {
 		return &result, nil
 	}
@@ -25,24 +25,9 @@ func (s *Storage) GetByName(ctx context.Context, name, Type string) (*model.Metr
 }
 
 func (s *Storage) GetAll(ctx context.Context) ([]model.Metric, error) {
-	rows, err := s.DB.QueryxContext(ctx, "SELECT name, type, value, delta FROM metrics")
-	if err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
 	var metrics []model.Metric
-	for rows.Next() {
-		var metric model.Metric
-		if err := rows.StructScan(&metric); err != nil {
-			return nil, err
-		}
-		metrics = append(metrics, metric)
-	}
-	
-	return metrics, nil
+	err := s.DB.SelectContext(ctx, &metrics, "SELECT name, type, value, delta FROM metrics")
+	return metrics, err
 }
 
 func (s *Storage) Save(ctx context.Context, metric model.Metric) error {

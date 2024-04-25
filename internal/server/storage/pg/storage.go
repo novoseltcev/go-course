@@ -2,6 +2,7 @@ package pg
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/jmoiron/sqlx"
@@ -15,21 +16,16 @@ type Storage struct {
 }
 
 func (s *Storage) GetByName(ctx context.Context, name, Type string) (*model.Metric, error) {
-	row := s.DB.QueryRowxContext(ctx, "SELECT name, value, delta, type FROM metrics WHERE type = $1 AND name = $2", Type, name)
-	if row == nil {
-		return nil, nil
-	}
-
 	var result model.Metric
-	if err := row.Scan(&result); err != nil {
-		return nil, err
+	err := s.DB.Get(&result, "SELECT name, type, value, delta FROM metrics WHERE type = $1 AND name = $2", Type, name)
+	if errors.Is(err, sql.ErrNoRows) {
+		return &result, nil
 	}
-
-	return &result, nil
+	return &result, err
 }
 
 func (s *Storage) GetAll(ctx context.Context) ([]model.Metric, error) {
-	rows, err := s.DB.QueryxContext(ctx, "SELECT name, value, delta, type FROM metrics")
+	rows, err := s.DB.QueryxContext(ctx, "SELECT name, type, value, delta FROM metrics")
 	if err != nil {
 		return nil, err
 	}

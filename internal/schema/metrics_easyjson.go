@@ -17,102 +17,70 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjson2220f231DecodeGithubComNovoseltcevGoCourseInternalSchema(in *jlexer.Lexer, out *MetricsList) {
+func easyjson2220f231DecodeGithubComNovoseltcevGoCourseInternalSchema(in *jlexer.Lexer, out *MetricsSlice) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
 		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
-		}
-		switch key {
-		case "metrics":
-			if in.IsNull() {
-				in.Skip()
-				out.Metrics = nil
+		*out = nil
+	} else {
+		in.Delim('[')
+		if *out == nil {
+			if !in.IsDelim(']') {
+				*out = make(MetricsSlice, 0, 1)
 			} else {
-				in.Delim('[')
-				if out.Metrics == nil {
-					if !in.IsDelim(']') {
-						out.Metrics = make([]Metrics, 0, 1)
-					} else {
-						out.Metrics = []Metrics{}
-					}
-				} else {
-					out.Metrics = (out.Metrics)[:0]
-				}
-				for !in.IsDelim(']') {
-					var v1 Metrics
-					(v1).UnmarshalEasyJSON(in)
-					out.Metrics = append(out.Metrics, v1)
-					in.WantComma()
-				}
-				in.Delim(']')
+				*out = MetricsSlice{}
 			}
-		default:
-			in.SkipRecursive()
+		} else {
+			*out = (*out)[:0]
 		}
-		in.WantComma()
+		for !in.IsDelim(']') {
+			var v1 Metrics
+			(v1).UnmarshalEasyJSON(in)
+			*out = append(*out, v1)
+			in.WantComma()
+		}
+		in.Delim(']')
 	}
-	in.Delim('}')
 	if isTopLevel {
 		in.Consumed()
 	}
 }
-func easyjson2220f231EncodeGithubComNovoseltcevGoCourseInternalSchema(out *jwriter.Writer, in MetricsList) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	{
-		const prefix string = ",\"metrics\":"
-		out.RawString(prefix[1:])
-		if in.Metrics == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
-			out.RawString("null")
-		} else {
-			out.RawByte('[')
-			for v2, v3 := range in.Metrics {
-				if v2 > 0 {
-					out.RawByte(',')
-				}
-				(v3).MarshalEasyJSON(out)
+func easyjson2220f231EncodeGithubComNovoseltcevGoCourseInternalSchema(out *jwriter.Writer, in MetricsSlice) {
+	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+		out.RawString("null")
+	} else {
+		out.RawByte('[')
+		for v2, v3 := range in {
+			if v2 > 0 {
+				out.RawByte(',')
 			}
-			out.RawByte(']')
+			(v3).MarshalEasyJSON(out)
 		}
+		out.RawByte(']')
 	}
-	out.RawByte('}')
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v MetricsList) MarshalJSON() ([]byte, error) {
+func (v MetricsSlice) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjson2220f231EncodeGithubComNovoseltcevGoCourseInternalSchema(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v MetricsList) MarshalEasyJSON(w *jwriter.Writer) {
+func (v MetricsSlice) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjson2220f231EncodeGithubComNovoseltcevGoCourseInternalSchema(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *MetricsList) UnmarshalJSON(data []byte) error {
+func (v *MetricsSlice) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjson2220f231DecodeGithubComNovoseltcevGoCourseInternalSchema(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *MetricsList) UnmarshalEasyJSON(l *jlexer.Lexer) {
+func (v *MetricsSlice) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson2220f231DecodeGithubComNovoseltcevGoCourseInternalSchema(l, v)
 }
 func easyjson2220f231DecodeGithubComNovoseltcevGoCourseInternalSchema1(in *jlexer.Lexer, out *Metrics) {

@@ -37,8 +37,8 @@ func SendMetrics(counterStorage * map[string]int64, gaugeStorage * map[string]fl
 	}
 }
 
-func send(c Client, baseURL string, metrics []schema.Metrics) error {
-	result, err := json.Marshal(schema.MetricsList{Metrics: metrics}); 
+func send(c Client, baseURL string, metrics schema.MetricsSlice) error {
+	result, err := json.Marshal(metrics); 
 	if err != nil {
 		return err
 	}

@@ -16,16 +16,16 @@ func UpdateMetricsBatch(storage *storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		var metrics schema.MetricsList
+		var metrics schema.MetricsSlice
         if err := json.UnmarshalFromReader(r.Body, &metrics); err != nil {
 			log.Error(err.Error())
             http.Error(w, err.Error(), http.StatusBadRequest)
             return
         }
 
-		batch := make([]model.Metric, 0, len(metrics.Metrics))
+		batch := make([]model.Metric, 0, len(metrics))
 
-		for _, metric := range metrics.Metrics {
+		for _, metric := range metrics {
 			switch metric.MType {
 			case "gauge":
 				if metric.Value == nil {

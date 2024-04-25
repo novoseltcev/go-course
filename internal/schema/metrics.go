@@ -8,6 +8,5 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-type MetricsList struct {
-	Metrics []Metrics `json:"metrics"`
-}
+//easyjson:json
+type MetricsSlice []Metrics

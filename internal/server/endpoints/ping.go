@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
+
+	"github.com/novoseltcev/go-course/internal/utils"
 )
 
 func Ping(db *sqlx.DB) http.HandlerFunc {
@@ -14,7 +16,10 @@ func Ping(db *sqlx.DB) http.HandlerFunc {
 		}
 		ctx := r.Context()
 		
-		if err := db.PingContext(ctx); err != nil {
+		err := utils.RetryPgExec(ctx, func() error {
+			return db.PingContext(ctx)
+		})
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

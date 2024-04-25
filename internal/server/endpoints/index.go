@@ -5,15 +5,19 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/utils"
 )
 
 
 func Index(storage *storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-	
-		metrics, err := (*storage).GetAll(ctx)
+		
+		metrics, err := utils.RetryPgSelect(ctx, func() ([]model.Metric, error) {
+			return (*storage).GetAll(ctx)
+		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}

@@ -9,7 +9,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/utils"
 )
 
 
@@ -23,7 +25,9 @@ func GetOneMetric(storage *storage.MetricStorager) http.HandlerFunc {
 		metricValue := ""
 		switch metricType {
 		case "gauge":
-			result, err := (*storage).GetByName(ctx, metricName, metricType)
+			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
+				return (*storage).GetByName(ctx, metricName, metricType)
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -33,7 +37,9 @@ func GetOneMetric(storage *storage.MetricStorager) http.HandlerFunc {
 				metricValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", *result.Value), "0"), ".")
 			}
 		case "counter":
-			result, err := (*storage).GetByName(ctx, metricName, metricType)
+			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
+				return (*storage).GetByName(ctx, metricName, metricType)
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

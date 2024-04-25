@@ -6,8 +6,10 @@ import (
 	json "github.com/mailru/easyjson"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/schema"
 	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/utils"
 )
 
 
@@ -25,7 +27,9 @@ func GetOneMetricFromJSON(storage *storage.MetricStorager) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		switch metric.MType {
 		case "gauge":
-			result, err := (*storage).GetByName(ctx, metric.ID, metric.MType)
+			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
+				return (*storage).GetByName(ctx, metric.ID, metric.MType)
+			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -38,7 +42,10 @@ func GetOneMetricFromJSON(storage *storage.MetricStorager) http.HandlerFunc {
 
 			metric.Value = result.Value
 		case "counter":
-			result, err := (*storage).GetByName(ctx, metric.ID, metric.MType)
+			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
+				return (*storage).GetByName(ctx, metric.ID, metric.MType)
+			})
+
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

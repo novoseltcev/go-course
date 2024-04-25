@@ -8,6 +8,7 @@ import (
 
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/utils"
 )
 
 
@@ -19,6 +20,7 @@ func UpdateMetric(storage *storage.MetricStorager) http.HandlerFunc {
 		metricName := chi.URLParam(r, "metricName")
 		metricValue := chi.URLParam(r, "metricValue")
 
+		var metric model.Metric
 		switch metricType {
 		case "gauge":
 			value, err := strconv.ParseFloat(metricValue, 64)
@@ -27,10 +29,7 @@ func UpdateMetric(storage *storage.MetricStorager) http.HandlerFunc {
 				return
 			}
 			
-			if err := (*storage).Save(ctx, model.Metric{Name: metricName, Type: metricType, Value: &value}); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			metric = model.Metric{Name: metricName, Type: metricType, Value: &value}
 		case "counter":
 			value, err := strconv.ParseInt(metricValue, 10, 64)
 			if err != nil {
@@ -38,12 +37,17 @@ func UpdateMetric(storage *storage.MetricStorager) http.HandlerFunc {
 				return
 			}
 
-			if err := (*storage).Save(ctx, model.Metric{Name: metricName, Type: metricType, Delta: &value}); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			metric = model.Metric{Name: metricName, Type: metricType, Delta: &value}
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		err := utils.RetryPgExec(ctx, func() error {
+			return (*storage).Save(ctx, metric)
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 

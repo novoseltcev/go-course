@@ -3,9 +3,11 @@ module github.com/novoseltcev/go-course
 go 1.22.1
 
 require (
+	github.com/avast/retry-go/v4 v4.6.0
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/golang-migrate/migrate v3.5.4+incompatible
+	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/mailru/easyjson v0.7.7

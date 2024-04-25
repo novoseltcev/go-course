@@ -9,6 +9,7 @@ import (
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/schema"
 	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/utils"
 )
 
 
@@ -50,7 +51,10 @@ func UpdateMetricsBatch(storage *storage.MetricStorager) http.HandlerFunc {
 		}
 
 		if len(batch) != 0 {
-			if err := (*storage).SaveAll(ctx, batch); err != nil {
+			err := utils.RetryPgExec(ctx, func() error {
+				return (*storage).SaveAll(ctx, batch)
+			})
+			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

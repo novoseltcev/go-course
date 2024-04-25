@@ -9,6 +9,7 @@ import (
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/schema"
 	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/utils"
 )
 
 
@@ -16,30 +17,40 @@ func UpdateMetricFromJSON(storage *storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		var metric schema.Metrics
-        if err := json.UnmarshalFromReader(r.Body, &metric); err != nil {
+		var s schema.Metrics
+        if err := json.UnmarshalFromReader(r.Body, &s); err != nil {
 			log.Error(err.Error())
             http.Error(w, err.Error(), http.StatusBadRequest)
             return
         }
 
-		switch metric.MType {
+		var metric model.Metric
+		switch s.MType {
 		case "gauge":
-			if metric.Value == nil {
+			if s.Value == nil {
 				log.Error("gauge metric has nil value")
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}
-			(*storage).Save(ctx, model.Metric{Name: metric.ID, Type: metric.MType, Value: metric.Value})
+			metric = model.Metric{Name: s.ID, Type: s.MType, Value: s.Value}
 		case "counter":
-			if metric.Delta == nil {
+			if s.Delta == nil {
 				log.Error("counter metric has nil delta")
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
             	return
 			}
-			(*storage).Save(ctx, model.Metric{Name: metric.ID, Type: metric.MType, Delta: metric.Delta})
+			
+			metric = model.Metric{Name: s.ID, Type: s.MType, Delta: s.Delta}
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		
+		err := utils.RetryPgExec(ctx, func() error {
+			return (*storage).Save(ctx, metric)
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 

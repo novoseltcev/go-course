@@ -8,35 +8,49 @@ import (
 
 	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/schema"
+	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/utils"
 )
 
 
-func UpdateMetricFromJSON(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricStorager[model.Gauge]) http.HandlerFunc {
+func UpdateMetricFromJSON(storage storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var metric schema.Metrics
-        if err := json.UnmarshalFromReader(r.Body, &metric); err != nil {
+		ctx := r.Context()
+
+		var s schema.Metrics
+        if err := json.UnmarshalFromReader(r.Body, &s); err != nil {
 			log.Error(err.Error())
             http.Error(w, err.Error(), http.StatusBadRequest)
             return
         }
 
-		switch metric.MType {
+		var metric model.Metric
+		switch s.MType {
 		case "gauge":
-			if metric.Value == nil {
+			if s.Value == nil {
 				log.Error("gauge metric has nil value")
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}
-			(*gaugeStorage).Update(metric.ID, model.Gauge(*metric.Value))
+			metric = model.Metric{Name: s.ID, Type: s.MType, Value: s.Value}
 		case "counter":
-			if metric.Delta == nil {
+			if s.Delta == nil {
 				log.Error("counter metric has nil delta")
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
             	return
 			}
-			(*counterStorage).Update(metric.ID, model.Counter(*metric.Delta))
+			
+			metric = model.Metric{Name: s.ID, Type: s.MType, Delta: s.Delta}
 		default:
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		
+		err := utils.RetryPgExec(ctx, func() error {
+			return storage.Save(ctx, metric)
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 

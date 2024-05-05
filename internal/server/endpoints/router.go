@@ -5,19 +5,21 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/server/middlewares"
+	"github.com/novoseltcev/go-course/internal/server/storage"
 )
 
 
-func GetRouter(counterStorage *MetricStorager[model.Counter], gaugeStorage *MetricStorager[model.Gauge]) http.Handler {
+func GetRouter(storage storage.MetricStorager) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middlewares.Gzip, middlewares.Logger)
 
-	r.Post(`/update/{metricType}/{metricName}/{metricValue}`, UpdateMetric(counterStorage, gaugeStorage))
-	r.Get(`/value/{metricType}/{metricName}`, GetOneMetric(counterStorage, gaugeStorage))
-	r.Post(`/update/`, UpdateMetricFromJSON(counterStorage, gaugeStorage))
-	r.Post(`/value/`, GetOneMetricFromJSON(counterStorage, gaugeStorage))
-	r.Get(`/`, Index(counterStorage, gaugeStorage))
+	r.Post(`/updates/`, UpdateMetricsBatch(storage))
+	r.Post(`/update/{metricType}/{metricName}/{metricValue}`, UpdateMetric(storage))
+	r.Get(`/value/{metricType}/{metricName}`, GetOneMetric(storage))
+	r.Post(`/update/`, UpdateMetricFromJSON(storage))
+	r.Post(`/value/`, GetOneMetricFromJSON(storage))
+	r.Get(`/ping`, Ping(storage))
+	r.Get(`/`, Index(storage))
 	return r
 }

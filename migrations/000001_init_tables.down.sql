@@ -1,0 +1,5 @@
+BEGIN;
+DROP INDEX IF EXISTS uq_metrics;
+DROP TABLE IF EXISTS metrics;
+DROP SEQUENCE IF EXISTS metrics_sequence;
+COMMIT;

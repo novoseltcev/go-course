@@ -16,5 +16,13 @@ agent: $(AGENT_DIR)/agent
 	$(AGENT_DIR)/agent -a 0.0.0.0:8080 -p 5 -r 5
 
 server: $(SERVER_DIR)/server
-	RESTORE=true STORE_INTERVAL=2 FILE_STORAGE_PATH=$(SERVER_DIR)/backup.json $(SERVER_DIR)/server -a :8080
+	DATABASE_DSN="postgres://postgres:postgres@0.0.0.0:5432/test?sslmode=disable" RESTORE=true STORE_INTERVAL=2 FILE_STORAGE_PATH=$(SERVER_DIR)/backup.json $(SERVER_DIR)/server -a :8080
 
+up:
+	docker-compose up -d --build
+
+down:
+	docker-compose down
+
+psql:
+	PGPASSWORD=postgres psql -U postgres -h 0.0.0.0 -p 5432 -d test

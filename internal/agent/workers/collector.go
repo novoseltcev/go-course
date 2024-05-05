@@ -4,19 +4,17 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
-
-	"github.com/novoseltcev/go-course/internal/model"
 )
 
 
-func CollectMetrics(counterStorage *map[string]model.Counter, gaugeStorage *map[string]model.Gauge) func() {
+func CollectMetrics(counterStorage *map[string]int64, gaugeStorage *map[string]float64) func() {
 	fmt.Println("init CollectMetrics worker")
 	return func () {
 		for k, v := range collectRuntimeMetrics() {
-			(*gaugeStorage)[k] = model.Gauge(v)
+			(*gaugeStorage)[k] = float64(v)
 		}
 		(*counterStorage)["PollCount"] += 1
-		(*gaugeStorage)["RandomValue"] = model.Gauge(rand.Float64())
+		(*gaugeStorage)["RandomValue"] = rand.Float64()
 	}
 }
 

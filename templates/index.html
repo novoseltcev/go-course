@@ -6,33 +6,24 @@
     </head>
     <body>
         <div>
-            <h2>Counter Metrics</h2>
-            <ul>
-                {{if .CounterMetrics}}
-                    {{range .CounterMetrics}}
+            <h2>Metrics</h2>
+                {{if .}}
+                    <ul>
+                        {{range .}}
                         <li>
-                            <div><b>{{ .Name }}</b>: {{ .Value }}</div>
+                            <div>
+                                {{ if .Delta }}
+                                    <b>Counter {{ .Name }}</b>: {{ .Delta }}
+                                {{else}}
+                                    <b>Gauge {{ .Name }}</b>: {{ .Value }}
+                                {{end}}
+                            </div>
                         </li>
-                    {{end}}
+                        {{end}}
+                    </ul>
                 {{else}}
                     <div>Empty</div>
                 {{end}}
-            </ul>
         </div>
-        <div>
-            <h2>Gauge Metrics</h2>
-            <ul>
-                {{if .GaugeMetrics}}
-                    {{range .GaugeMetrics}}
-                        <li>
-                            <div><b>{{ .Name }}</b>: {{ .Value }}</div>
-                        </li>
-                    {{end}}
-                {{else}}
-                    <div>Empty</div>
-                {{end}}
-            </ul>
-        </div>
-        
     </body>
 </html>

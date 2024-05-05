@@ -3,13 +3,14 @@ package workers
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	json "github.com/mailru/easyjson"
 
-	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/schema"
 )
 
@@ -18,32 +19,28 @@ type Client interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-func SendMetrics(counterStorage * map[string]model.Counter, gaugeStorage * map[string]model.Gauge, client Client, baseURL string) func() {
+func SendMetrics(counterStorage * map[string]int64, gaugeStorage * map[string]float64, client Client, baseURL string) func() {
 	fmt.Println("init SendMetrics worker")
 	return func ()  {
 		fmt.Printf("counters length=%d; gauge length=%d\n", len(*counterStorage), len(*gaugeStorage))
-
+		var metrics []schema.Metrics
 		for k, v := range *gaugeStorage {
 			value := float64(v)
-			err := send(client, baseURL, schema.Metrics{ID: k, MType: "gauge", Value: &value})
-			if err == nil {
-				delete(*gaugeStorage, k)
-			}
+			metrics = append(metrics, schema.Metrics{ID: k, MType: "gauge", Value: &value})
 		}
 
 		for k, v := range *counterStorage {
 			delta := int64(v)
-			err := send(client, baseURL, schema.Metrics{ID: k, MType: "counter", Delta: &delta})
-			if err == nil {
-				delete(*counterStorage, k)
-			}
+			metrics = append(metrics, schema.Metrics{ID: k, MType: "counter", Delta: &delta})
 		}
+
+		send(client, baseURL, metrics)
 		fmt.Println("All sended")
 	}
 }
 
-func send(c Client, baseURL string, metric schema.Metrics) error {
-	result, err := json.Marshal(metric); 
+func send(c Client, baseURL string, metrics schema.MetricsSlice) error {
+	result, err := json.Marshal(metrics); 
 	if err != nil {
 		return err
 	}
@@ -55,7 +52,7 @@ func send(c Client, baseURL string, metric schema.Metrics) error {
 	}
 	zb.Close()
 
-	url := baseURL + "/update/"
+	url := baseURL + "/updates/"
 	response, err := post(c, url, buf)
 	if err != nil {
 		fmt.Printf("Error during send request to %s\n", url)
@@ -75,11 +72,30 @@ func send(c Client, baseURL string, metric schema.Metrics) error {
 }
 
 func post(c Client, url string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodPost, url, body)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
-	return c.Do(req)
+	var (
+        err error
+        response *http.Response
+    )
+	timeouts := []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
+	retries := len(timeouts)
+    for retries > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), timeouts[len(timeouts) - retries])
+		defer cancel()
+
+        req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+		if reqErr != nil {
+			return nil, reqErr
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Encoding", "gzip")
+		response, err = c.Do(req)
+        if err != nil {
+			fmt.Println("retry send metrics")
+            retries -= 1
+        } else {
+            break
+        }
+    }
+
+	return response, err
 }

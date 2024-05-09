@@ -6,9 +6,6 @@ import (
 	"os"
 	"time"
 
-	_ "github.com/golang-migrate/migrate/source/file"
-	_ "github.com/jackc/pgx/v5/stdlib"
-
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/internal/server/storage"
 	"github.com/novoseltcev/go-course/internal/server/storage/mem"

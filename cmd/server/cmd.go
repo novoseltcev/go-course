@@ -20,6 +20,7 @@ func Cmd() *cobra.Command {
 			fileStoragePath, _ := flags.GetString("f")
 			restore, _ := flags.GetBool("r")
 			databaseDsn, _ := flags.GetString("d")
+			secretKey, _ := flags.GetString("k")
 
 			config := server.Config{
 				Address: address,
@@ -27,6 +28,7 @@ func Cmd() *cobra.Command {
 				FileStoragePath: fileStoragePath,
 				Restore: restore,
 				DatabaseDsn: databaseDsn,
+				SecretKey: secretKey,
 			}
 			env.Parse(&config)
 	
@@ -43,5 +45,6 @@ func Cmd() *cobra.Command {
 	flags.IntP("s", "s", 300, "backup interval")
 	flags.StringP("f", "f", "/tmp/metrics-db.json", "path to backup")
 	flags.BoolP("r", "r", true, "restore from backup after restart")
+	flags.StringP("k", "k", "", "Secret key for hashing data")
 	return cmd
 }

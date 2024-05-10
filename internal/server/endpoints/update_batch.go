@@ -16,10 +16,9 @@ import (
 func UpdateMetricsBatch(storage storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-
 		var metrics schema.MetricsSlice
         if err := json.UnmarshalFromReader(r.Body, &metrics); err != nil {
-			log.Error(err.Error())
+			log.WithError(err).Error("unmarshalable body")
             http.Error(w, err.Error(), http.StatusBadRequest)
             return
         }
@@ -55,6 +54,7 @@ func UpdateMetricsBatch(storage storage.MetricStorager) http.HandlerFunc {
 				return storage.SaveAll(ctx, batch)
 			})
 			if err != nil {
+				log.WithError(err).Error("cannot save metrics")
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

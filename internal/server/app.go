@@ -6,7 +6,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
+	"github.com/novoseltcev/go-course/internal/server/middlewares"
 	"github.com/novoseltcev/go-course/internal/server/storage"
 	"github.com/novoseltcev/go-course/internal/server/storage/mem"
 	"github.com/novoseltcev/go-course/internal/server/storage/pg"
@@ -51,7 +53,7 @@ func (s *Server) Start() error {
 		defer s.Backup()
 	}
 
-	return http.ListenAndServe(s.config.Address, endpoints.GetRouter(s.MetricStorage))
+	return http.ListenAndServe(s.config.Address, s.GetRouter())
 }
 
 func (s *Server) Restore() error {
@@ -84,4 +86,30 @@ func (s *Server) Backup() error {
 	defer fd.Close()
 	
 	return json.NewEncoder(fd).Encode(s)
+}
+
+
+func (s *Server) GetRouter() http.Handler {
+	r := chi.NewRouter()
+	r.Use(middlewares.Logger)
+
+	if s.config.SecretKey != "" {
+		r.Use(middlewares.CheckSum(s.config.SecretKey))
+	}
+	r.Use(middlewares.Gzip)
+	if s.config.SecretKey != "" {
+		r.Use(middlewares.Sign(s.config.SecretKey))
+	}
+
+	storage := s.MetricStorage
+
+	r.Get(`/ping`, endpoints.Ping(storage))
+	r.Get(`/`, endpoints.Index(storage))
+	r.Post(`/update/{metricType}/{metricName}/{metricValue}`, endpoints.UpdateMetric(storage))
+	r.Get(`/value/{metricType}/{metricName}`, endpoints.GetOneMetric(storage))
+	r.Post(`/update/`, endpoints.UpdateMetricFromJSON(storage))
+	r.Post(`/value/`, endpoints.GetOneMetricFromJSON(storage))
+	r.Post(`/updates/`, endpoints.UpdateMetricsBatch(storage))
+	
+	return r
 }

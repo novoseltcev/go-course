@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -30,6 +31,11 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.
 	return resp, string(respBody)
 }
 
+func getRouter(s storage.MetricStorager) http.Handler {
+	r := chi.NewRouter()
+	r.Post(`/update/{metricType}/{metricName}/{metricValue}`, UpdateMetric(s))
+	return r
+}
 
 func TestUpdateMetric(t *testing.T) {
 	var counterValue = int64(1)
@@ -118,7 +124,8 @@ func TestUpdateMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts := httptest.NewServer(GetRouter(tt.storage))
+			
+			ts := httptest.NewServer(getRouter(tt.storage))
     		defer ts.Close()
 
 			response, _ := testRequest(t, ts, tt.method, tt.url)

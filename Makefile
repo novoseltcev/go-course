@@ -13,10 +13,10 @@ build-server: generate $(SERVER_DIR)/main.go
 build: build-agent build-server
 
 agent: $(AGENT_DIR)/agent
-	$(AGENT_DIR)/agent -a 0.0.0.0:8080 -p 5 -r 5
+	$(AGENT_DIR)/agent -a 0.0.0.0:8080 -p 2 -r 5 -k secret-key 
 
 server: $(SERVER_DIR)/server
-	DATABASE_DSN="postgres://postgres:postgres@0.0.0.0:5432/test?sslmode=disable" RESTORE=true STORE_INTERVAL=2 FILE_STORAGE_PATH=$(SERVER_DIR)/backup.json $(SERVER_DIR)/server -a :8080
+	KEY=secret-key DATABASE_DSN="postgres://postgres:postgres@0.0.0.0:5432/praktikum?sslmode=disable" RESTORE=true STORE_INTERVAL=2 FILE_STORAGE_PATH=$(SERVER_DIR)/backup.json $(SERVER_DIR)/server -a :8080
 
 up:
 	docker-compose up -d --build

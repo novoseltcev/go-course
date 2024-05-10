@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,32 +21,27 @@ type Client interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-func SendMetrics(counterStorage * map[string]int64, gaugeStorage * map[string]float64, client Client, baseURL string) func() {
-	fmt.Println("init SendMetrics worker")
-	return func ()  {
-		fmt.Printf("counters length=%d; gauge length=%d\n", len(*counterStorage), len(*gaugeStorage))
-		var metrics []schema.Metrics
-		for k, v := range *gaugeStorage {
-			value := float64(v)
-			metrics = append(metrics, schema.Metrics{ID: k, MType: "gauge", Value: &value})
-		}
-
-		for k, v := range *counterStorage {
-			delta := int64(v)
-			metrics = append(metrics, schema.Metrics{ID: k, MType: "counter", Delta: &delta})
-		}
-
-		send(client, baseURL, metrics)
-		fmt.Println("All sended")
+func SendMetrics(counterStorage * map[string]int64, gaugeStorage * map[string]float64, client Client, baseURL, hashKey string) error {
+	fmt.Printf("counters length=%d; gauge length=%d\n", len(*counterStorage), len(*gaugeStorage))
+	var metrics []schema.Metrics
+	for k, v := range *gaugeStorage {
+		v := v
+		metrics = append(metrics, schema.Metrics{ID: k, MType: "gauge", Value: &v})
 	}
+
+	for k, v := range *counterStorage {
+		v := v
+		metrics = append(metrics, schema.Metrics{ID: k, MType: "counter", Delta: &v})
+	}
+
+	return send(client, baseURL, hashKey, metrics)
 }
 
-func send(c Client, baseURL string, metrics schema.MetricsSlice) error {
+func send(c Client, baseURL, hashKey string, metrics schema.MetricsSlice) error {
 	result, err := json.Marshal(metrics); 
 	if err != nil {
 		return err
 	}
-
 	buf := bytes.NewBuffer(nil)
 	zb := gzip.NewWriter(buf)
 	if _, err := zb.Write(result); err != nil {
@@ -52,8 +49,15 @@ func send(c Client, baseURL string, metrics schema.MetricsSlice) error {
 	}
 	zb.Close()
 
+	var checkSum []byte;
+	if hashKey != "" {
+		h := hmac.New(sha256.New, []byte(hashKey))
+		h.Write(buf.Bytes())
+		checkSum = h.Sum(nil)
+	}
+
 	url := baseURL + "/updates/"
-	response, err := post(c, url, buf)
+	response, err := post(c, url, checkSum, buf)
 	if err != nil {
 		fmt.Printf("Error during send request to %s\n", url)
 		return err
@@ -71,7 +75,7 @@ func send(c Client, baseURL string, metrics schema.MetricsSlice) error {
 	return nil
 }
 
-func post(c Client, url string, body io.Reader) (*http.Response, error) {
+func post(c Client, url string, checkSum []byte, body io.Reader) (*http.Response, error) {
 	var (
         err error
         response *http.Response
@@ -86,8 +90,13 @@ func post(c Client, url string, body io.Reader) (*http.Response, error) {
 		if reqErr != nil {
 			return nil, reqErr
 		}
+
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Encoding", "gzip")
+		if checkSum != nil {
+			req.Header.Set("HashSHA256", fmt.Sprintf("%x", checkSum))
+		}
+
 		response, err = c.Do(req)
         if err != nil {
 			fmt.Println("retry send metrics")

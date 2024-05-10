@@ -1,21 +1,17 @@
 package workers
 
 import (
-	"fmt"
 	"math/rand"
 	"runtime"
 )
 
 
-func CollectMetrics(counterStorage *map[string]int64, gaugeStorage *map[string]float64) func() {
-	fmt.Println("init CollectMetrics worker")
-	return func () {
-		for k, v := range collectRuntimeMetrics() {
-			(*gaugeStorage)[k] = float64(v)
-		}
-		(*counterStorage)["PollCount"] += 1
-		(*gaugeStorage)["RandomValue"] = rand.Float64()
+func CollectMetrics(counterStorage *map[string]int64, gaugeStorage *map[string]float64) {
+	for k, v := range collectRuntimeMetrics() {
+		(*gaugeStorage)[k] = float64(v)
 	}
+	(*counterStorage)["PollCount"] += 1
+	(*gaugeStorage)["RandomValue"] = rand.Float64()
 }
 
 func collectRuntimeMetrics () map[string]float64 {

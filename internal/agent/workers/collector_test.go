@@ -15,7 +15,7 @@ func TestCollectMetricsToEmptyStorage(t *testing.T) {
 	require.Empty(t, gaugeStorage)
 	require.Empty(t, counterStorage)
 
-	CollectMetrics(&counterStorage, &gaugeStorage)()
+	CollectMetrics(&counterStorage, &gaugeStorage)
 
 	require.Len(t, gaugeStorage, 28)
 	gaugeStorageKeys := make([]string, 0, 28)
@@ -98,7 +98,7 @@ func TestCollectMetricsToFullStorage(t *testing.T) {
 	assert.Len(t, gaugeStorage, 28)
 	assert.Len(t, counterStorage, 1)
 
-	CollectMetrics(&counterStorage, &gaugeStorage)()
+	CollectMetrics(&counterStorage, &gaugeStorage)
 
 	assert.Len(t, gaugeStorage, 28)
 

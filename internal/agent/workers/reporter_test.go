@@ -18,5 +18,5 @@ func TestSendMetrics(t *testing.T) {
 	var client Client = ClientMock{}
 	baseURL := "http://0.0.0.0:8080"
 
-	SendMetrics(&counterStorage, &gaugeStorage, client, baseURL)()
+	SendMetrics(&counterStorage, &gaugeStorage, client, baseURL, "secret-key")
 }

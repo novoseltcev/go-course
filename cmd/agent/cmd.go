@@ -15,11 +15,13 @@ func Cmd() *cobra.Command {
 			address, _ := flags.GetString("a")
 			pollInterval, _ := flags.GetInt("p")
 			reportInterval, _ := flags.GetInt("r")
+			secretKey, _ := flags.GetString("k")
 
 			config := agent.Config{
 				Address: address,
 				PollInterval: pollInterval,
 				ReportInterval: reportInterval,
+				SecretKey: secretKey,
 			}
 			env.Parse(&config)
 
@@ -32,5 +34,6 @@ func Cmd() *cobra.Command {
 	flags.StringP("a", "a", "localhost:8080", "Server address")
 	flags.IntP("p", "p", 2, "poll runtime metrics interval")
 	flags.IntP("r", "r", 10, "send metrics to server interval")
+	flags.StringP("k", "k", "", "Secret key for hashing data")
 	return cmd
 }

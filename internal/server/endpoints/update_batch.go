@@ -44,6 +44,7 @@ func UpdateMetricsBatch(storage storage.MetricStorager) http.HandlerFunc {
 
 				batch = append(batch, model.Metric{Name: metric.ID, Type: metric.MType, Delta: metric.Delta})
 			default:
+				log.WithField("type", metric.MType).Error("invalid metric type")
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}

@@ -1,20 +1,46 @@
 package workers
 
 import (
+	"context"
 	"math/rand"
 	"runtime"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/novoseltcev/go-course/internal/model"
 )
 
+var counterStep int64 = 1
 
-func CollectMetrics(counterStorage *map[string]int64, gaugeStorage *map[string]float64) {
-	for k, v := range collectRuntimeMetrics() {
-		(*gaugeStorage)[k] = float64(v)
-	}
-	(*counterStorage)["PollCount"] += 1
-	(*gaugeStorage)["RandomValue"] = rand.Float64()
+func CollectMetrics(ctx context.Context, delay time.Duration) <-chan model.Metric {
+	ch := make(chan model.Metric)
+	go func() {
+		defer close(ch)
+		log.WithField("workerName", "CollectMetrics").Info("start worker")
+
+		for {
+			for name, value := range collectRuntimeMetrics() {
+				log.WithFields(log.Fields{"name": name, "value": value}).Info("collect runtime metric")
+				ch <- model.Metric{Name: name, Type: "gauge", Value: &value}
+			}
+
+			randValue := rand.Float64()
+			ch <- model.Metric{Name: "RandomValue", Type: "gauge", Value: &randValue}
+			ch <- model.Metric{Name: "PollCount", Type: "counter", Delta: &counterStep}
+
+			select {
+			case <- ctx.Done():
+				return
+			default:
+				time.Sleep(delay)
+			}
+		}
+	}()
+	return ch
 }
 
-func collectRuntimeMetrics () map[string]float64 {
+func collectRuntimeMetrics() map[string]float64 {
 	rtm := new(runtime.MemStats)
 	runtime.ReadMemStats(rtm)
 	result := make(map[string]float64, 27)

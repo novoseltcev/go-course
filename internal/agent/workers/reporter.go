@@ -12,7 +12,9 @@ import (
 	"time"
 
 	json "github.com/mailru/easyjson"
+	log "github.com/sirupsen/logrus"
 
+	"github.com/novoseltcev/go-course/internal/model"
 	"github.com/novoseltcev/go-course/internal/schema"
 )
 
@@ -21,20 +23,25 @@ type Client interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-func SendMetrics(counterStorage * map[string]int64, gaugeStorage * map[string]float64, client Client, baseURL, hashKey string) error {
-	fmt.Printf("counters length=%d; gauge length=%d\n", len(*counterStorage), len(*gaugeStorage))
-	var metrics []schema.Metrics
-	for k, v := range *gaugeStorage {
-		v := v
-		metrics = append(metrics, schema.Metrics{ID: k, MType: "gauge", Value: &v})
-	}
+func SendMetrics(jobsCh <-chan model.Metric, rateLimit time.Duration, client Client, baseURL, hashKey string) {
+	logger := log.WithField("workerName", "SendMetrics")
+	logger.Info("start worker")
 
-	for k, v := range *counterStorage {
-		v := v
-		metrics = append(metrics, schema.Metrics{ID: k, MType: "counter", Delta: &v})
-	}
+	lastSent := time.Now()
+	body := make([]schema.Metrics, 0)
 
-	return send(client, baseURL, hashKey, metrics)
+	for metric := range jobsCh {
+		body = append(body, schema.Metrics{ID: metric.Name, MType: metric.Type, Value: metric.Value, Delta: metric.Delta})
+
+		if time.Since(lastSent) > rateLimit {
+			if err := send(client, baseURL, hashKey, body); err != nil {
+				logger.WithError(err).Error("crash worker")
+			} else {
+				body = make([]schema.Metrics, 0)
+			}
+			lastSent = time.Now()
+		}
+	}
 }
 
 func send(c Client, baseURL, hashKey string, metrics schema.MetricsSlice) error {

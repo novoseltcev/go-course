@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/cpu"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/model"
@@ -20,7 +22,7 @@ func CollectMetrics(ctx context.Context, delay time.Duration) <-chan model.Metri
 		log.WithField("workerName", "CollectMetrics").Info("start worker")
 
 		for {
-			for name, value := range collectRuntimeMetrics() {
+			for name, value := range getRuntimeMetrics() {
 				log.WithFields(log.Fields{"name": name, "value": value}).Info("collect runtime metric")
 				ch <- model.Metric{Name: name, Type: "gauge", Value: &value}
 			}
@@ -40,7 +42,7 @@ func CollectMetrics(ctx context.Context, delay time.Duration) <-chan model.Metri
 	return ch
 }
 
-func collectRuntimeMetrics() map[string]float64 {
+func getRuntimeMetrics() map[string]float64 {
 	rtm := new(runtime.MemStats)
 	runtime.ReadMemStats(rtm)
 	result := make(map[string]float64, 27)
@@ -74,4 +76,37 @@ func collectRuntimeMetrics() map[string]float64 {
 	result["TotalAlloc"] = float64(rtm.TotalAlloc)
 
 	return result
+}
+
+func getCoreMetrics() map[string]float64 {
+	result := make(map[string]float64, 27)
+	vmStat, _ := mem.VirtualMemory()
+	result["TotalMemory"] = float64(vmStat.Total)
+	result["FreeMemory"] = float64(vmStat.Free)
+	cpuLoad, _ := cpu.Percent(0, true)
+	result["CPUutilization1"] = cpuLoad[0]
+	return result
+}
+
+func CollectCoreMetrics(ctx context.Context, delay time.Duration) <-chan model.Metric {
+	ch := make(chan model.Metric)
+	go func() {
+		defer close(ch)
+		log.WithField("workerName", "CollectAdditionalMetrics").Info("start worker")
+
+		for {
+			for name, value := range getCoreMetrics() {
+				log.WithFields(log.Fields{"name": name, "value": value}).Info("collect core metric")
+				ch <- model.Metric{Name: name, Type: "gauge", Value: &value}
+			}
+
+			select {
+			case <- ctx.Done():
+				return
+			default:
+				time.Sleep(delay)
+			}
+		}
+	}()
+	return ch
 }

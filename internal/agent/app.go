@@ -20,7 +20,10 @@ func NewAgent(config Config) *Agent {
 }
 
 func (s *Agent) Start(ctx context.Context) {
-	metricCh := workers.CollectMetrics(ctx, s.config.PollInterval)
+	runtimeMetricCh := workers.CollectMetrics(ctx, s.config.PollInterval)
+	coreMetricCh := workers.CollectCoreMetrics(ctx, s.config.PollInterval)
+
+	metricCh := workers.FanIn(ctx, runtimeMetricCh, coreMetricCh)
 
 	go workers.SendMetrics(metricCh, s.config.RateLimit, &s.client, "http://" + s.config.Address, s.config.SecretKey)
 

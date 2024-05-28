@@ -21,7 +21,7 @@ func TestSendMetrics(t *testing.T) {
 
 	go SendMetrics(ch, 1, client, baseURL, "secret-key")
 
-	var value float64 = 123.321
+	value := 123.321
 	var delta int64 = 2
 	ch <- model.Metric{Type: "gauge", Name: "Some", Value: &value}
 	ch <- model.Metric{Type: "counter", Name: "Some", Delta: &delta}

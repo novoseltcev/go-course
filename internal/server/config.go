@@ -6,4 +6,5 @@ type Config struct {
 	FileStoragePath string	`env:"FILE_STORAGE_PATH"`
 	Restore bool 			`env:"RESTORE"`
 	DatabaseDsn string		`env:"DATABASE_DSN"`
+	SecretKey string		`env:"KEY"`
 }

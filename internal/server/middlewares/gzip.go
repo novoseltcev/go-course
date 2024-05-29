@@ -5,6 +5,8 @@ import (
 	"strings"
 	"net/http"
 	"compress/gzip"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type compressReader struct {
@@ -35,12 +37,12 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 
 func Gzip(next http.Handler) http.Handler {
     wrapper := func(w http.ResponseWriter, r *http.Request) {        
-        
         contentEncoding := r.Header.Get("Content-Encoding")
         if isCompressed := strings.Contains(contentEncoding, "gzip"); isCompressed {
             decompressor, err := gzip.NewReader(r.Body)
 			if err != nil {
-                http.Error(w, err.Error(), http.StatusInternalServerError)
+                log.WithError(err).Error("cannot decompress body")
+                http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
                 return
 			}
 			cr := &compressReader{

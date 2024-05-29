@@ -27,5 +27,10 @@ func FanIn(ctx context.Context, resultChs ...<-chan model.Metric) <-chan model.M
         }()
     }
 
+    go func() {
+        wg.Wait()
+        close(finalCh)
+    }()
+
     return finalCh
 }

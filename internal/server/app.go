@@ -12,6 +12,7 @@ import (
 	"github.com/novoseltcev/go-course/internal/server/storage"
 	"github.com/novoseltcev/go-course/internal/server/storage/mem"
 	"github.com/novoseltcev/go-course/internal/server/storage/pg"
+	"net/http/pprof"
 )
 
 
@@ -111,5 +112,9 @@ func (s *Server) GetRouter() http.Handler {
 	r.Post(`/value/`, endpoints.GetOneMetricFromJSON(storage))
 	r.Post(`/updates/`, endpoints.UpdateMetricsBatch(storage))
 	
+    r.HandleFunc("/debug/pprof", pprof.Index)
+    r.HandleFunc("/debug/pprof/profile", pprof.Profile)
+    r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
+
 	return r
 }

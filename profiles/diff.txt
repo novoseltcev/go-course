@@ -1,0 +1,14 @@
+File: agent
+Type: inuse_space
+Time: Oct 4, 2024 at 2:33am (MSK)
+Showing nodes accounting for -8312.06kB, 46.34% of 17936.10kB total
+      flat  flat%   sum%        cum   cum%
+-6775.99kB 37.78% 37.78% -6775.99kB 37.78%  github.com/novoseltcev/go-course/internal/agent/workers.SendMetrics
+-1024.02kB  5.71% 43.49% -1024.02kB  5.71%  github.com/sirupsen/logrus.(*TextFormatter).printColored
+ -512.05kB  2.85% 46.34%  -512.05kB  2.85%  github.com/novoseltcev/go-course/internal/agent/workers.FanIn.func1
+         0     0% 46.34% -1024.02kB  5.71%  github.com/novoseltcev/go-course/internal/agent/workers.CollectMetrics.func1
+         0     0% 46.34% -1024.02kB  5.71%  github.com/sirupsen/logrus.(*Entry).Info (inline)
+         0     0% 46.34% -1024.02kB  5.71%  github.com/sirupsen/logrus.(*Entry).Log
+         0     0% 46.34% -1024.02kB  5.71%  github.com/sirupsen/logrus.(*Entry).log
+         0     0% 46.34% -1024.02kB  5.71%  github.com/sirupsen/logrus.(*Entry).write
+         0     0% 46.34% -1024.02kB  5.71%  github.com/sirupsen/logrus.(*TextFormatter).Format

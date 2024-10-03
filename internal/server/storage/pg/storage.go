@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/golang-migrate/migrate"
-	"github.com/golang-migrate/migrate/database/postgres"
 	_ "github.com/golang-migrate/migrate/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -25,21 +23,6 @@ type storage struct {
 func New(URL string) (s.MetricStorager, error) {
 	db, err := sqlx.Open("pgx", URL)
 	if err != nil {
-		return nil, err
-	}
-	
-	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
-	if err != nil {
-		return nil, err
-	}
-	m, err := migrate.NewWithDatabaseInstance("file://./migrations", "postgres", driver)
-	if err != nil {
-		return nil, err
-	}
-	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		if downErr := m.Down(); downErr != nil {
-			return nil, errors.Join(err, downErr)
-		}
 		return nil, err
 	}
 

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/novoseltcev/go-course/internal/agent/workers"
+	_ "net/http/pprof"
 )
 
 type Agent struct {
@@ -27,5 +28,6 @@ func (s *Agent) Start(ctx context.Context) {
 
 	go workers.SendMetrics(metricCh, s.config.RateLimit, &s.client, "http://" + s.config.Address, s.config.SecretKey)
 
+	http.ListenAndServe(":9000", nil)
     <- ctx.Done()
 }

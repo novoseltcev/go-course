@@ -1,4 +1,13 @@
-main: generate build up migrate server
+main: generate format lint build up migrate server
+
+format:
+	golangci-lint run --fix
+
+lint:
+	golangci-lint run
+
+fast-lint:
+	golangci-lint run --fast	
 
 generate:
 	go generate ./...
@@ -37,10 +46,10 @@ migrate:
 	migrate -source file://migrations -database $(DATABASE_URI) up
 
 test:
-	go test -v -coverprofile=profiles/profile.cov -bench=. -benchmem ./...
+	go test -v -coverprofile=reports/profile.cov -bench=. -benchmem ./...
 
 cover: test
-	go tool cover -func=profiles/profile.cov
+	go tool cover -func=reports/profile.cov
 
 cover-html: test
-	go tool cover -html=profiles/profile.cov
+	go tool cover -html=reports/coverage.html

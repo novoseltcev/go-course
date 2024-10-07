@@ -1,0 +1,54 @@
+run:
+  timeout: 3m
+  tests: true
+  build-tags:
+    - unit
+    - integration
+
+output:
+  formats:
+    - format: colored-line-number
+      path: stdout
+    - format: html
+      path: reports/golangci-lint.html
+  uniq-by-line: false
+  sort-results: true
+  sort-order:
+    - file
+    - severity
+    - linter
+  show-stats: true
+
+linters:
+  enable-all: true
+  disable:
+    - gomnd
+    - execinquery
+
+
+linters-settings:
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  lll:
+    line-length: 120
+  misspell:
+    locale: US
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - dupl
+        - gosec
+    - linters:
+        - lll
+      source: "^//go:generate "
+  exclude-generated: lax
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  fix: true

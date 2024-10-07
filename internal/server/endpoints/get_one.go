@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,11 +10,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/novoseltcev/go-course/internal/model"
+	"github.com/novoseltcev/go-course/internal/schema"
+	"github.com/novoseltcev/go-course/internal/server/services"
 	"github.com/novoseltcev/go-course/internal/server/storage"
-	"github.com/novoseltcev/go-course/internal/utils"
 )
 
+const pgRetries uint = 3
 
 func GetOneMetric(storage storage.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -22,43 +24,41 @@ func GetOneMetric(storage storage.MetricStorager) http.HandlerFunc {
 		metricType := chi.URLParam(r, "metricType")
 		metricName := chi.URLParam(r, "metricName")
 
-		metricValue := ""
+		result, err := services.GetMetric(ctx, storage, pgRetries, metricName, metricType)
+		if err != nil {
+			var statusCode int
+
+			switch {
+			case errors.Is(err, services.ErrInvalidType):
+				statusCode = http.StatusBadRequest
+			case errors.Is(err, services.ErrMetricNotFound):
+				statusCode = http.StatusNotFound
+			default:
+				statusCode = http.StatusInternalServerError
+			}
+
+			http.Error(w, err.Error(), statusCode)
+
+			return
+		}
+
+		var metricValue string
+
 		switch metricType {
-		case "gauge":
-			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
-				return storage.GetByName(ctx, metricName, metricType)
-			})
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			if result != nil {
-				metricValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", *result.Value), "0"), ".")
-			}
-		case "counter":
-			result, err := utils.RetryPgSelect(ctx, func() (*model.Metric, error) {
-				return storage.GetByName(ctx, metricName, metricType)
-			})
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			if result != nil {
-				metricValue = strconv.Itoa(int(*result.Delta))
-			}
-
+		case schema.Gauge:
+			metricValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", *result.Value), "0"), ".")
+		case schema.Counter:
+			metricValue = strconv.Itoa(int(*result.Delta))
 		default:
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
+			panic("unreachable")
 		}
-		
-		if metricValue == "" {
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+
+		if _, err := io.WriteString(w, metricValue); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+
 			return
 		}
 
-		io.WriteString(w, metricValue)
+		w.WriteHeader(http.StatusOK)
 	}
 }

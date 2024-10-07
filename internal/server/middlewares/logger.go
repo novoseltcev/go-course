@@ -10,7 +10,7 @@ import (
 type (
 	responseData struct {
 		status int
-		size int
+		size   int
 	}
 
 	loggingResponseWriter struct {
@@ -20,29 +20,39 @@ type (
 )
 
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-	size, err := r.ResponseWriter.Write(b) 
+	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
+
 	return size, err
 }
 
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-	r.ResponseWriter.WriteHeader(statusCode) 
+	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode
-} 
+}
 
 func Logger(handler http.Handler) http.Handler {
 	wrapper := func(w http.ResponseWriter, r *http.Request) {
-		lw := loggingResponseWriter {
+		lrw := loggingResponseWriter{
 			ResponseWriter: w,
-			responseData: responseData {
+			responseData: responseData{
 				status: 0,
-				size: 0,
+				size:   0,
 			},
 		}
 		start := time.Now()
-		handler.ServeHTTP(&lw, r)
+
+		handler.ServeHTTP(&lrw, r)
+
 		elapsed := time.Since(start)
-		log.Infof("%s %s - %d %dB in %.3fµs", r.Method, r.URL, lw.responseData.status, lw.responseData.size, float64(elapsed) / 1000)
+		log.Infof(
+			"%s %s - %d %dB in %.3fµs",
+			r.Method,
+			r.URL,
+			lrw.responseData.status,
+			lrw.responseData.size,
+			float64(elapsed)/float64(time.Microsecond),
+		)
 	}
 
 	return http.HandlerFunc(wrapper)

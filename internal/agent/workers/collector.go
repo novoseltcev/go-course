@@ -6,21 +6,20 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/novoseltcev/go-course/internal/model"
+	"github.com/novoseltcev/go-course/internal/schema"
 )
 
-var counterStep int64 = 1
 type pair struct {
-	name string
+	name  string
 	value float64
 }
 
-func CollectMetrics(ctx context.Context, delay time.Duration) <-chan model.Metric {
-	ch := make(chan model.Metric)
+func CollectMetrics(ctx context.Context, delay time.Duration) <-chan schema.Metric {
+	ch := make(chan schema.Metric)
 	go func() {
 		defer close(ch)
 		log.WithField("workerName", "CollectMetrics").Info("start worker")
@@ -28,21 +27,24 @@ func CollectMetrics(ctx context.Context, delay time.Duration) <-chan model.Metri
 		for {
 			for _, p := range getRuntimeMetrics() {
 				log.WithFields(log.Fields{"name": p.name, "value": p.value}).Info("collect runtime metric")
-				ch <- model.Metric{Name: p.name, Type: "gauge", Value: &p.value}
+				ch <- schema.Metric{ID: p.name, MType: schema.Gauge, Value: &p.value}
 			}
 
-			randValue := rand.Float64()
-			ch <- model.Metric{Name: "RandomValue", Type: "gauge", Value: &randValue}
-			ch <- model.Metric{Name: "PollCount", Type: "counter", Delta: &counterStep}
+			randValue := rand.Float64() //nolint:gosec
+			ch <- schema.Metric{ID: "RandomValue", MType: schema.Gauge, Value: &randValue}
+
+			var counterStep int64 = 10
+			ch <- schema.Metric{ID: "PollCount", MType: schema.Counter, Delta: &counterStep}
 
 			select {
-			case <- ctx.Done():
+			case <-ctx.Done():
 				return
 			default:
 				time.Sleep(delay)
 			}
 		}
 	}()
+
 	return ch
 }
 
@@ -50,8 +52,8 @@ func getRuntimeMetrics() []pair {
 	rtm := new(runtime.MemStats)
 	runtime.ReadMemStats(rtm)
 
-	result := make([]pair, 27)
-	result = append(result, pair{"GCCPUFraction", rtm.GCCPUFraction})
+	result := make([]pair, 0, 27) //nolint:mnd
+	result = append(result, pair{"Alloc", float64(rtm.Alloc)})
 	result = append(result, pair{"Alloc", float64(rtm.Alloc)})
 	result = append(result, pair{"BuckHashSys", float64(rtm.BuckHashSys)})
 	result = append(result, pair{"Frees", float64(rtm.Frees)})
@@ -82,37 +84,53 @@ func getRuntimeMetrics() []pair {
 	return result
 }
 
-func getCoreMetrics() []pair {
-	vmStat, _ := mem.VirtualMemory()
-	cpuLoad, _ := cpu.Percent(0, true)
+func getCoreMetrics() ([]pair, error) {
+	vmStat, err := mem.VirtualMemory()
+	if err != nil {
+		return nil, err
+	}
 
-	result := make([]pair, 3)
+	cpuLoad, err := cpu.Percent(0, true)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]pair, 0)
 	result = append(result, pair{"TotalMemory", float64(vmStat.Total)})
 	result = append(result, pair{"FreeMemory", float64(vmStat.Free)})
 	result = append(result, pair{"CPUutilization1", cpuLoad[0]})
 
-	return result
+	return result, nil
 }
 
-func CollectCoreMetrics(ctx context.Context, delay time.Duration) <-chan model.Metric {
-	ch := make(chan model.Metric)
+func CollectCoreMetrics(ctx context.Context, delay time.Duration) <-chan schema.Metric {
+	ch := make(chan schema.Metric)
 	go func() {
 		defer close(ch)
+
 		log.WithField("workerName", "CollectAdditionalMetrics").Info("start worker")
 
 		for {
-			for _, p := range getCoreMetrics() {
+			pairs, err := getCoreMetrics()
+			if err != nil {
+				log.WithError(err).Error("get core metrics")
+
+				continue
+			}
+
+			for _, p := range pairs {
 				log.WithFields(log.Fields{"name": p.name, "value": p.value}).Info("collect core metric")
-				ch <- model.Metric{Name: p.name, Type: "gauge", Value: &p.value}
+				ch <- schema.Metric{ID: p.name, MType: schema.Gauge, Value: &p.value}
 			}
 
 			select {
-			case <- ctx.Done():
+			case <-ctx.Done():
 				return
 			default:
 				time.Sleep(delay)
 			}
 		}
 	}()
+
 	return ch
 }

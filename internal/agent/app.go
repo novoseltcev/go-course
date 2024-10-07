@@ -3,9 +3,11 @@ package agent
 import (
 	"context"
 	"net/http"
+	_ "net/http/pprof" //nolint:gosec
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/agent/workers"
-	_ "net/http/pprof"
 )
 
 type Agent struct {
@@ -16,7 +18,7 @@ type Agent struct {
 func NewAgent(config Config) *Agent {
 	return &Agent{
 		config: config,
-		client: http.Client{},
+		client: *http.DefaultClient,
 	}
 }
 
@@ -26,8 +28,11 @@ func (s *Agent) Start(ctx context.Context) {
 
 	metricCh := workers.FanIn(ctx, runtimeMetricCh, coreMetricCh)
 
-	go workers.SendMetrics(metricCh, s.config.RateLimit, &s.client, "http://" + s.config.Address, s.config.SecretKey)
+	go workers.SendMetrics(ctx, metricCh, &s.client, s.config.RateLimit, "http://"+s.config.Address, s.config.SecretKey)
 
-	http.ListenAndServe(":9000", nil)
-    <- ctx.Done()
+	if err := http.ListenAndServe(":9000", nil); err != nil {
+		log.Fatal(err)
+	}
+
+	<-ctx.Done()
 }

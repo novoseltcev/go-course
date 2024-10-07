@@ -1,40 +1,55 @@
-package workers
+package workers_test
 
 import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/novoseltcev/go-course/internal/agent/workers"
 )
 
 func TestCollectMetrics(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 1)
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
 	defer cancel()
 
-	ch := CollectMetrics(ctx, time.Second)
+	ch := workers.CollectMetrics(ctx, time.Second)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case metric := <-ch:
-			t.Log(metric)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case metric := <-ch:
+				t.Log(metric)
+			}
 		}
-	}
+	}()
+
+	<-ctx.Done()
 }
 
 func TestCollectCoreMetrics(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 1)
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
 	defer cancel()
 
-	ch := CollectCoreMetrics(ctx, time.Second)
+	ch := workers.CollectCoreMetrics(ctx, time.Second)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case metric := <-ch:
-			t.Log(metric)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case metric := <-ch:
+				t.Log(metric)
+			}
 		}
-	}
+	}()
 
+	<-ctx.Done()
 }

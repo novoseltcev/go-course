@@ -24,20 +24,75 @@ linters:
   disable:
     - gomnd
     - execinquery
-
+    - wrapcheck
 
 linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  depguard:
+    rules:
+      main:
+        files:
+          - $all
+        deny:
+          - pkg: "github.com/pkg/errors"
+            desc: Should be replaced by standard lib errors package
+  exhaustruct:
+    exclude:
+      - '.+/cobra\.Command$'
+      - '.+/schema\.Metric$'
+      - '.+/*_test\.<anonymous>$'
   goconst:
     min-len: 2
     min-occurrences: 2
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/novoseltcev/go-course)
+  goimports:
+    local-prefixes: github.com/novoseltcev/go-course
+  gosec:
+    excludes:
+      - G114
+  ireturn:
+    allow:
+      - anon
+      - error
+      - empty
+      - stdlib
+      - generic
+      - github.com/novoseltcev/go-course/internal/server/storage.MetricStorager
   lll:
     line-length: 120
   misspell:
     locale: US
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-
+  mnd:
+    ignored-numbers:
+      - '0o666'
+  varnamelen:
+    check-return: true
+    # check-type-param: true
+    ignore-type-assert-ok: true
+    ignore-map-index-ok: true
+    ignore-chan-recv-ok: true
+    ignore-names:
+      - err
+      - tt
+      - ch
+    ignore-decls:
+      - t testing.T
+      - b testing.B
+      - ts *httptest.Server
+      - r *http.Request
+      - w http.ResponseWriter
+      - c Client
+      - wg sync.WaitGroup
+      - r *chi.Mux
+      - tx *sql.Tx
+      - fd *os.File
+  
 issues:
   exclude-rules:
     - path: _test\.go

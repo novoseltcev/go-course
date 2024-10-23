@@ -3,27 +3,22 @@ package workers_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/novoseltcev/go-course/pkg/workers"
 )
 
-func TestProducerSuccess(t *testing.T) {
-	t.Parallel()
-
+func ExampleProducer() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 
 	defer cancel()
 
-	testData := []int{1, 2, 3}
-	produced := make([]int, 0)
-
 	ch := workers.Producer(ctx, func(_ context.Context) ([]int, error) {
-		return testData, nil
+		return []int{1, 2, 3}, nil
 	}, time.Second)
 
 	go func() {
@@ -32,15 +27,17 @@ func TestProducerSuccess(t *testing.T) {
 			case <-ctx.Done():
 				return
 			case v := <-ch:
-				produced = append(produced, v)
+				fmt.Println(v)
 			}
 		}
 	}()
 
 	<-ctx.Done()
 
-	require.NotEmpty(t, produced)
-	assert.InDeltaSlice(t, testData, produced, 1)
+	// Output:
+	// 1
+	// 2
+	// 3
 }
 
 var errSome = errors.New("some error")

@@ -31,15 +31,12 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
+// Logger middleware.
+//
+// It will log the method url, status code and the size of the response body with the elapsed time in nanoseconds.
 func Logger(handler http.Handler) http.Handler {
 	wrapper := func(w http.ResponseWriter, r *http.Request) {
-		lrw := loggingResponseWriter{
-			ResponseWriter: w,
-			responseData: responseData{
-				status: 0,
-				size:   0,
-			},
-		}
+		lrw := loggingResponseWriter{ResponseWriter: w, responseData: responseData{}} //nolint:exhaustruct
 		start := time.Now()
 
 		handler.ServeHTTP(&lrw, r)

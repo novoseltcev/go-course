@@ -2,6 +2,7 @@ package workers_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -56,4 +57,39 @@ func TestFanIn(t *testing.T) {
 	}()
 
 	<-ctx.Done()
+}
+
+func ExampleFanIn() {
+	ch1 := make(chan int)
+	ch2 := make(chan int)
+
+	defer close(ch1)
+	defer close(ch2)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	ch := workers.FanIn(ctx, ch1, ch2)
+
+	ch1 <- 1
+	ch2 <- 2
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case data, ok := <-ch:
+				if ok {
+					fmt.Println(data)
+				}
+			}
+		}
+	}()
+
+	time.Sleep(time.Second)
+
+	// Output:
+	// 1
+	// 2
 }

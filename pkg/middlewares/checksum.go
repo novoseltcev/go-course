@@ -14,6 +14,11 @@ import (
 
 var ErrInvalidCheckSum = errors.New("invalid check sum")
 
+// CheckSum is a middleware that checks the checksum of the request body.
+//
+// The middleware expects the key to be passed as a parameter.
+// It expects the checksum to be in the header "Hashsha256".
+// The middleware will check if the checksum is equal to the computed checksum.
 func CheckSum(key string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		wrapper := func(w http.ResponseWriter, r *http.Request) {

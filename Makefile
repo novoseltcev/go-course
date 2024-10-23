@@ -50,8 +50,11 @@ test:
 	go test -v -coverprofile=$(COVERAGE_PROFILE) -bench=. -benchmem ./...
 	grep -v -E -f .covignore $(COVERAGE_PROFILE) > $(COVERAGE_PROFILE).filtered && mv $(COVERAGE_PROFILE).filtered $(COVERAGE_PROFILE)
 
-cover: test
+cover:
 	go tool cover -func=$(COVERAGE_PROFILE)
 
-cover-html: test
+cover-html:
 	go tool cover -html=$(COVERAGE_PROFILE)
+
+docs:
+	pkgsite -http=:8080

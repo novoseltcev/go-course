@@ -5,12 +5,18 @@ import (
 	"sync"
 )
 
-func FanIn[T any](ctx context.Context, resultChs ...<-chan T) <-chan T {
-	finalCh := make(chan T, len(resultChs))
+// FanIn merges channels into one.
+//
+// FanIn manage output channel.
+// If ctx is canceled, returned channel is closed and process is stopped.
+//
+// Returns channel with buffer of len(chs) that merges all channels data.
+func FanIn[T any](ctx context.Context, chs ...<-chan T) <-chan T {
+	finalCh := make(chan T, len(chs))
 
 	var wg sync.WaitGroup
 
-	for _, ch := range resultChs {
+	for _, ch := range chs {
 		wg.Add(1)
 
 		chClosure := ch

@@ -1,3 +1,4 @@
+// Package schemas contains seralizable and deserializable data structures.
 package schemas
 
 const (
@@ -7,10 +8,10 @@ const (
 
 //go:generate easyjson -all metrics.go
 type Metric struct {
-	ID    string   `db:"id"    json:"id"`              // имя метрики
-	MType string   `db:"type"  json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `db:"delta" json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `db:"value" json:"value,omitempty"` // значение метрики в случае передачи gauge
+	ID    string   `db:"id"    json:"id"`              // name of metric
+	MType string   `db:"type"  json:"type"`            // parameter, specifying gauge or counter
+	Delta *int64   `db:"delta" json:"delta,omitempty"` // value of metric in case of counter
+	Value *float64 `db:"value" json:"value,omitempty"` // value of metric in case of gauge
 }
 
 //easyjson:json

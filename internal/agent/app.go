@@ -3,8 +3,13 @@ package agent
 import (
 	"context"
 	"net/http"
+	_ "net/http/pprof" //nolint:gosec
 
-	"github.com/novoseltcev/go-course/internal/agent/workers"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/novoseltcev/go-course/internal/agent/collectors"
+	"github.com/novoseltcev/go-course/internal/agent/reporters"
+	"github.com/novoseltcev/go-course/pkg/workers"
 )
 
 type Agent struct {
@@ -15,17 +20,22 @@ type Agent struct {
 func NewAgent(config Config) *Agent {
 	return &Agent{
 		config: config,
-		client: http.Client{},
+		client: *http.DefaultClient,
 	}
 }
 
 func (s *Agent) Start(ctx context.Context) {
-	runtimeMetricCh := workers.CollectMetrics(ctx, s.config.PollInterval)
-	coreMetricCh := workers.CollectCoreMetrics(ctx, s.config.PollInterval)
+	runtimeMetricCh := workers.Producer(ctx, collectors.CollectRuntimeMetrics, s.config.PollInterval)
+	coreMetricCh := workers.Producer(ctx, collectors.CollectCoreMetrics, s.config.PollInterval)
 
 	metricCh := workers.FanIn(ctx, runtimeMetricCh, coreMetricCh)
 
-	go workers.SendMetrics(metricCh, s.config.RateLimit, &s.client, "http://" + s.config.Address, s.config.SecretKey)
+	reporter := reporters.NewAPIReporter(http.DefaultClient, "http://"+s.config.Address, s.config.SecretKey)
+	go workers.AntiFraudConsumer(ctx, metricCh, reporter.Report, s.config.RateLimit)
 
-    <- ctx.Done()
+	if err := http.ListenAndServe(":9000", nil); err != nil {
+		log.Fatal(err)
+	}
+
+	<-ctx.Done()
 }

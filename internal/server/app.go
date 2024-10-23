@@ -12,15 +12,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
-	"github.com/novoseltcev/go-course/internal/server/middlewares"
-	"github.com/novoseltcev/go-course/internal/server/storage"
-	"github.com/novoseltcev/go-course/internal/server/storage/mem"
-	"github.com/novoseltcev/go-course/internal/server/storage/pg"
+	"github.com/novoseltcev/go-course/internal/storages"
+	"github.com/novoseltcev/go-course/pkg/middlewares"
 )
 
 type Server struct {
 	config        *Config
-	MetricStorage storage.MetricStorager `json:"storage"`
+	MetricStorage storages.MetricStorager `json:"storage"`
 }
 
 func NewServer(config *Config) *Server {
@@ -32,9 +30,9 @@ func NewServer(config *Config) *Server {
 
 func (s *Server) Start() error {
 	if s.config.DatabaseDsn == "" {
-		s.MetricStorage = mem.New()
+		s.MetricStorage = storages.NewMemStorage()
 	} else {
-		storage, err := pg.New(s.config.DatabaseDsn)
+		storage, err := storages.NewPgStorage(s.config.DatabaseDsn)
 		if err != nil {
 			log.WithError(err).Error("failed to create initial storage")
 

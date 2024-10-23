@@ -7,12 +7,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/novoseltcev/go-course/internal/schema"
-	"github.com/novoseltcev/go-course/internal/server/services"
-	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/schemas"
+	"github.com/novoseltcev/go-course/internal/services"
+	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-func UpdateMetric(storage storage.MetricStorager) http.HandlerFunc {
+func UpdateMetric(storage storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -20,23 +20,23 @@ func UpdateMetric(storage storage.MetricStorager) http.HandlerFunc {
 		metricName := chi.URLParam(r, "metricName")
 		metricValue := chi.URLParam(r, "metricValue")
 
-		metric := schema.Metric{ID: metricName, MType: metricType}
+		metric := schemas.Metric{ID: metricName, MType: metricType}
 
-		if metricType == schema.Gauge {
+		if metricType == schemas.Gauge {
 			value, err := strconv.ParseFloat(metricValue, 64)
 			if err == nil {
 				metric.Value = &value
 			}
 		}
 
-		if metricType == schema.Counter {
+		if metricType == schemas.Counter {
 			value, err := strconv.ParseInt(metricValue, 10, 64)
 			if err == nil {
 				metric.Delta = &value
 			}
 		}
 
-		if err := services.SaveMetric(ctx, storage, pgRetries, &metric); err != nil {
+		if err := services.SaveMetric(ctx, storage, &metric); err != nil {
 			var statusCode int
 
 			switch {

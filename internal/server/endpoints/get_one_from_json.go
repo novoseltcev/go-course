@@ -7,16 +7,16 @@ import (
 	json "github.com/mailru/easyjson"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/novoseltcev/go-course/internal/schema"
-	"github.com/novoseltcev/go-course/internal/server/services"
-	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/schemas"
+	"github.com/novoseltcev/go-course/internal/services"
+	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-func GetOneMetricFromJSON(storage storage.MetricStorager) http.HandlerFunc {
+func GetOneMetricFromJSON(storage storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		var metric schema.Metric
+		var metric schemas.Metric
 		if err := json.UnmarshalFromReader(r.Body, &metric); err != nil {
 			log.Warn(err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -26,7 +26,7 @@ func GetOneMetricFromJSON(storage storage.MetricStorager) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 
-		result, err := services.GetMetric(ctx, storage, pgRetries, metric.ID, metric.MType)
+		result, err := services.GetMetric(ctx, storage, metric.ID, metric.MType)
 		if err != nil {
 			var statusCode int
 

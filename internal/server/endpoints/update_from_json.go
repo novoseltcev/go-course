@@ -7,16 +7,16 @@ import (
 	json "github.com/mailru/easyjson"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/novoseltcev/go-course/internal/schema"
-	"github.com/novoseltcev/go-course/internal/server/services"
-	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/schemas"
+	"github.com/novoseltcev/go-course/internal/services"
+	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-func UpdateMetricFromJSON(storage storage.MetricStorager) http.HandlerFunc {
+func UpdateMetricFromJSON(storage storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		var reqBody schema.Metric
+		var reqBody schemas.Metric
 		if err := json.UnmarshalFromReader(r.Body, &reqBody); err != nil {
 			log.WithError(err).Error("unmarshalable body")
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -24,7 +24,7 @@ func UpdateMetricFromJSON(storage storage.MetricStorager) http.HandlerFunc {
 			return
 		}
 
-		if err := services.SaveMetric(ctx, storage, pgRetries, &reqBody); err != nil {
+		if err := services.SaveMetric(ctx, storage, &reqBody); err != nil {
 			var statusCode int
 
 			switch {

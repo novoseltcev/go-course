@@ -45,11 +45,13 @@ psql:
 migrate:
 	migrate -source file://migrations -database $(DATABASE_URI) up
 
+COVERAGE_PROFILE=reports/profile.cov
 test:
-	go test -v -coverprofile=reports/profile.cov -bench=. -benchmem ./...
+	go test -v -coverprofile=$(COVERAGE_PROFILE) -bench=. -benchmem ./...
+	grep -v -E -f .covignore $(COVERAGE_PROFILE) > $(COVERAGE_PROFILE).filtered && mv $(COVERAGE_PROFILE).filtered $(COVERAGE_PROFILE)
 
 cover: test
-	go tool cover -func=reports/profile.cov
+	go tool cover -func=$(COVERAGE_PROFILE)
 
 cover-html: test
-	go tool cover -html=reports/coverage.html
+	go tool cover -html=$(COVERAGE_PROFILE)

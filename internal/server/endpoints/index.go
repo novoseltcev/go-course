@@ -4,15 +4,15 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/novoseltcev/go-course/internal/server/services"
-	"github.com/novoseltcev/go-course/internal/server/storage"
+	"github.com/novoseltcev/go-course/internal/services"
+	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-func Index(storage storage.MetricStorager) http.HandlerFunc {
+func Index(storage storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		metrics, err := services.GetAllMetric(ctx, storage, pgRetries)
+		metrics, err := services.GetAllMetric(ctx, storage)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 

@@ -7,7 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/novoseltcev/go-course/internal/agent/workers"
+	"github.com/novoseltcev/go-course/internal/agent/collectors"
+	"github.com/novoseltcev/go-course/internal/agent/reporters"
+	"github.com/novoseltcev/go-course/pkg/workers"
 )
 
 type Agent struct {
@@ -23,12 +25,13 @@ func NewAgent(config Config) *Agent {
 }
 
 func (s *Agent) Start(ctx context.Context) {
-	runtimeMetricCh := workers.CollectMetrics(ctx, s.config.PollInterval)
-	coreMetricCh := workers.CollectCoreMetrics(ctx, s.config.PollInterval)
+	runtimeMetricCh := workers.Producer(ctx, collectors.CollectRuntimeMetrics, s.config.PollInterval)
+	coreMetricCh := workers.Producer(ctx, collectors.CollectCoreMetrics, s.config.PollInterval)
 
 	metricCh := workers.FanIn(ctx, runtimeMetricCh, coreMetricCh)
 
-	go workers.SendMetrics(ctx, metricCh, &s.client, s.config.RateLimit, "http://"+s.config.Address, s.config.SecretKey)
+	reporter := reporters.NewAPIReporter(http.DefaultClient, "http://"+s.config.Address, s.config.SecretKey)
+	go workers.AntiFraudConsumer(ctx, metricCh, reporter.Report, s.config.RateLimit)
 
 	if err := http.ListenAndServe(":9000", nil); err != nil {
 		log.Fatal(err)

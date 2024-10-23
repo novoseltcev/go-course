@@ -41,7 +41,8 @@ linters-settings:
   exhaustruct:
     exclude:
       - '.+/cobra\.Command$'
-      - '.+/schema\.Metric$'
+      - '.+/schemas\.Metric$'
+      - '.+/retry\.Options$'
       - '.+/*_test\.<anonymous>$'
   goconst:
     min-len: 2
@@ -63,7 +64,7 @@ linters-settings:
       - empty
       - stdlib
       - generic
-      - github.com/novoseltcev/go-course/internal/server/storage.MetricStorager
+      - github.com/novoseltcev/go-course/internal/storages.MetricStorager
   lll:
     line-length: 120
   misspell:
@@ -92,14 +93,19 @@ linters-settings:
       - r *chi.Mux
       - tx *sql.Tx
       - fd *os.File
+      - i int
+      - p []byte
   
 issues:
   exclude-rules:
     - path: _test\.go
       linters:
         - errcheck
+        - exhaustruct
         - dupl
+        - funlen
         - gosec
+        - unparam
     - linters:
         - lll
       source: "^//go:generate "

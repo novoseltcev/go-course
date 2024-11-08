@@ -2,9 +2,12 @@ package storages
 
 import (
 	"context"
+	"errors"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
 )
+
+var ErrNotFound = errors.New("metric not found")
 
 // Storager is an interface for metric storage.
 //
@@ -12,11 +15,12 @@ import (
 // The interface also includes a Ping method for testing the connection and a Close method for closing the connection.
 //
 // TODO: Separate interface on many interfaces.
+//
+//go:generate mockgen -source=storager.go  -destination=../../mocks/storager_mock.go -package=mocks
 type MetricStorager interface {
-	GetByName(ctx context.Context, name, Type string) (*schemas.Metric, error)
+	GetOne(ctx context.Context, id, mType string) (*schemas.Metric, error)
 	GetAll(ctx context.Context) ([]schemas.Metric, error)
 	Save(ctx context.Context, metric *schemas.Metric) error
-	SaveAll(ctx context.Context, metrics []schemas.Metric) error
+	SaveBatch(ctx context.Context, metrics []schemas.Metric) error
 	Ping(ctx context.Context) error
-	Close() error
 }

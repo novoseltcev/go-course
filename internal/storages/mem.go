@@ -8,21 +8,21 @@ import (
 )
 
 type MemStorage struct {
-	Metrics map[string]map[string]schemas.Metric
+	m map[string]map[string]schemas.Metric
 }
 
 func NewMemStorage() *MemStorage {
-	metrics := make(map[string]map[string]schemas.Metric)
-	metrics["counter"] = make(map[string]schemas.Metric)
-	metrics["gauge"] = make(map[string]schemas.Metric)
+	m := make(map[string]map[string]schemas.Metric)
+	m[schemas.Counter] = make(map[string]schemas.Metric)
+	m[schemas.Gauge] = make(map[string]schemas.Metric)
 
-	return &MemStorage{Metrics: metrics}
+	return &MemStorage{m}
 }
 
-func (s MemStorage) GetByName(_ context.Context, name, metricType string) (*schemas.Metric, error) {
-	result, ok := s.Metrics[metricType][name]
+func (s MemStorage) GetOne(_ context.Context, id, mType string) (*schemas.Metric, error) {
+	result, ok := s.m[mType][id]
 	if !ok {
-		return nil, nil //nolint:nilnil
+		return nil, ErrNotFound
 	}
 
 	return &result, nil
@@ -31,8 +31,8 @@ func (s MemStorage) GetByName(_ context.Context, name, metricType string) (*sche
 func (s *MemStorage) GetAll(_ context.Context) ([]schemas.Metric, error) {
 	result := make([]schemas.Metric, 0)
 
-	for Type := range s.Metrics {
-		data := s.Metrics[Type]
+	for Type := range s.m {
+		data := s.m[Type]
 
 		names := make([]string, 0, len(data))
 		for name := range data {
@@ -50,17 +50,17 @@ func (s *MemStorage) GetAll(_ context.Context) ([]schemas.Metric, error) {
 }
 
 func (s *MemStorage) Save(_ context.Context, metric *schemas.Metric) error {
-	saved, ok := s.Metrics[metric.MType][metric.ID]
+	saved, ok := s.m[metric.MType][metric.ID]
 	if metric.MType == "counter" && ok && saved.Delta != nil {
 		*saved.Delta += *metric.Delta
 	} else {
-		s.Metrics[metric.MType][metric.ID] = *metric
+		s.m[metric.MType][metric.ID] = *metric
 	}
 
 	return nil
 }
 
-func (s *MemStorage) SaveAll(ctx context.Context, metrics []schemas.Metric) error {
+func (s *MemStorage) SaveBatch(ctx context.Context, metrics []schemas.Metric) error {
 	for _, metric := range metrics {
 		if err := s.Save(ctx, &metric); err != nil {
 			return err
@@ -71,9 +71,5 @@ func (s *MemStorage) SaveAll(ctx context.Context, metrics []schemas.Metric) erro
 }
 
 func (s *MemStorage) Ping(_ context.Context) error {
-	return nil
-}
-
-func (s *MemStorage) Close() error {
 	return nil
 }

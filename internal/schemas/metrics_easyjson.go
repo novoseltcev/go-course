@@ -175,10 +175,6 @@ func easyjson2220f231DecodeGithubComNovoseltcevGoCourseInternalSchemas2(in *jlex
 			continue
 		}
 		switch key {
-		case "id":
-			out.ID = string(in.String())
-		case "type":
-			out.MType = string(in.String())
 		case "delta":
 			if in.IsNull() {
 				in.Skip()
@@ -199,6 +195,10 @@ func easyjson2220f231DecodeGithubComNovoseltcevGoCourseInternalSchemas2(in *jlex
 				}
 				*out.Value = float64(in.Float64())
 			}
+		case "id":
+			out.ID = string(in.String())
+		case "type":
+			out.MType = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -213,25 +213,36 @@ func easyjson2220f231EncodeGithubComNovoseltcevGoCourseInternalSchemas2(out *jwr
 	out.RawByte('{')
 	first := true
 	_ = first
+	if in.Delta != nil {
+		const prefix string = ",\"delta\":"
+		first = false
+		out.RawString(prefix[1:])
+		out.Int64(int64(*in.Delta))
+	}
+	if in.Value != nil {
+		const prefix string = ",\"value\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Float64(float64(*in.Value))
+	}
 	{
 		const prefix string = ",\"id\":"
-		out.RawString(prefix[1:])
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
 		out.String(string(in.ID))
 	}
 	{
 		const prefix string = ",\"type\":"
 		out.RawString(prefix)
 		out.String(string(in.MType))
-	}
-	if in.Delta != nil {
-		const prefix string = ",\"delta\":"
-		out.RawString(prefix)
-		out.Int64(int64(*in.Delta))
-	}
-	if in.Value != nil {
-		const prefix string = ",\"value\":"
-		out.RawString(prefix)
-		out.Float64(float64(*in.Value))
 	}
 	out.RawByte('}')
 }

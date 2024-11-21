@@ -46,14 +46,14 @@ func TestGetOneMetricFromJSON(t *testing.T) {
 			got{id: testID, Type: schemas.Gauge},
 			&want{&testGauge, nil},
 			http.StatusOK,
-			`{"id":"test","type":"gauge","value":10.123}`,
+			`{"value":10.123,"id":"test","type":"gauge"}`,
 		},
 		{
 			"success counter",
 			got{id: testID, Type: schemas.Counter},
 			&want{&testCounter, nil},
 			http.StatusOK,
-			`{"id":"test","type":"counter","delta":10}`,
+			`{"delta":10,"id":"test","type":"counter"}`,
 		},
 		{
 			"metric not found",

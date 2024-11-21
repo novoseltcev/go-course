@@ -1,14 +1,5 @@
 main: generate format lint build up migrate server
 
-format:
-	golangci-lint run --fix
-
-lint:
-	golangci-lint run
-
-fast-lint:
-	golangci-lint run --fast	
-
 generate:
 	go generate ./...
 
@@ -22,15 +13,30 @@ SERVER_DIR=./cmd/server
 build-server: generate $(SERVER_DIR)/main.go
 	go build -buildvcs=false -o $(SERVER_DIR)/server $(SERVER_DIR) 
 
-build: build-agent build-server
+STATICLINT_DIR=./cmd/staticlint
 
+build-staticlint: $(STATICLINT_DIR)/main.go
+	go build -buildvcs=false -o $(STATICLINT_DIR)/staticlint $(STATICLINT_DIR)
+
+build: build-agent build-server build-staticlint
+
+
+.PHONY: staticlint
+staticlint: build-staticlint $(STATICLINT_DIR)/staticlint
+	$(STATICLINT_DIR)/staticlint ./...
+
+.PHONY: agent
 agent: $(AGENT_DIR)/agent
 	$(AGENT_DIR)/agent -a 0.0.0.0:8080 -p 2 -r 5
 
 DATABASE_URI=postgresql://postgres:postgres@0.0.0.0:5432/praktikum?sslmode=disable
-
+.PHONY: server
 server: $(SERVER_DIR)/server
 	DATABASE_DSN=$(DATABASE_URI) RESTORE=true STORE_INTERVAL=2 FILE_STORAGE_PATH=$(SERVER_DIR)/backup.json $(SERVER_DIR)/server -a :8080
+
+migrate:
+	migrate -source file://migrations -database $(DATABASE_URI) up
+
 
 up:
 	docker-compose up -d --build
@@ -42,8 +48,12 @@ down:
 psql:
 	psql $(DATABASE_URI)
 
-migrate:
-	migrate -source file://migrations -database $(DATABASE_URI) up
+
+format:
+	golangci-lint run --fix
+
+lint: build-staticlint
+	$(STATICLINT_DIR)/staticlint ./... & golangci-lint run
 
 COVERAGE_PROFILE=reports/profile.cov
 test:
@@ -58,3 +68,4 @@ cover-html:
 
 docs:
 	pkgsite -http=:8080
+

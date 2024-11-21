@@ -10,13 +10,13 @@ const (
 
 //go:generate easyjson -all metrics.go
 type Metric struct {
-	ID    string   `db:"name"  json:"id"`              // name of metric
-	MType string   `db:"type"  json:"type"`            // parameter, specifying gauge or counter
 	Delta *int64   `db:"delta" json:"delta,omitempty"` // value of metric in case of counter
 	Value *float64 `db:"value" json:"value,omitempty"` // value of metric in case of gauge
+	ID    string   `db:"name"  json:"id"`              // name of metric
+	MType string   `db:"type"  json:"type"`            // parameter, specifying gauge or counter
 }
 
-// nolint: err113
+//nolint: err113
 func (m *Metric) Validate() error {
 	if m.ID == "" {
 		return errors.New("id is required")

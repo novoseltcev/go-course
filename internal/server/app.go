@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -88,9 +89,9 @@ func (s *Server) Restore() error {
 
 	fd, err := os.OpenFile(s.config.FileStoragePath, os.O_RDONLY, 0o666)
 	if os.IsNotExist(err) {
-		_, err := os.OpenFile(s.config.FileStoragePath, os.O_CREATE, 0o666)
+		_, closeErr := os.OpenFile(s.config.FileStoragePath, os.O_CREATE, 0o666)
 
-		return err
+		return errors.Join(err, closeErr)
 	}
 
 	if err != nil {

@@ -7,11 +7,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
-	"github.com/novoseltcev/go-course/internal/services"
 	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-func UpdateMetricsBatch(storage storages.MetricStorager) http.HandlerFunc {
+func UpdateMetricsBatch(storager storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -26,21 +25,8 @@ func UpdateMetricsBatch(storage storages.MetricStorager) http.HandlerFunc {
 		batch := make([]schemas.Metric, 0, len(metrics))
 
 		for _, metric := range metrics {
-			switch metric.MType {
-			case schemas.Gauge:
-				if metric.Value == nil {
-					log.Error("gauge metric has nil value")
-
-					continue
-				}
-			case schemas.Counter:
-				if metric.Delta == nil {
-					log.Error("counter metric has nil delta")
-
-					continue
-				}
-			default:
-				log.WithField("type", metric.MType).Error("invalid metric type")
+			if err := metric.Validate(); err != nil {
+				log.WithError(err).Error("invalid metric")
 
 				continue
 			}
@@ -49,10 +35,10 @@ func UpdateMetricsBatch(storage storages.MetricStorager) http.HandlerFunc {
 		}
 
 		if len(batch) != 0 {
-			err := services.SaveMetricsBatch(ctx, storage, batch)
+			err := storager.SaveBatch(ctx, batch)
 			if err != nil {
-				log.WithError(err).Error("cannot save metrics")
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				log.WithError(err).Error("failed to save metrics")
+				http.Error(w, "failed to save metrics", http.StatusInternalServerError)
 
 				return
 			}

@@ -13,7 +13,8 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-reports/
+reports/*
+!reports/coverage.out
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -31,3 +32,4 @@ cmd/agent/agent
 cmd/server/main
 cmd/server/server
 cmd/server/*.json
+cmd/staticlint/staticlint

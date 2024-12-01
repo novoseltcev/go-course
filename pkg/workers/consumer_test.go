@@ -1,3 +1,4 @@
+// nolint: paralleltest
 package workers_test
 
 import (
@@ -11,8 +12,6 @@ import (
 )
 
 func TestConsumerSuccess(t *testing.T) {
-	t.Parallel()
-
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 
@@ -60,8 +59,6 @@ func TestConsumerErr(t *testing.T) {
 }
 
 func TestAntiFraudConsumerOnce(t *testing.T) {
-	t.Parallel()
-
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond+500*time.Microsecond)
 
@@ -90,8 +87,6 @@ func TestAntiFraudConsumerOnce(t *testing.T) {
 }
 
 func TestAntiFraudConsumerMany(t *testing.T) {
-	t.Parallel()
-
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Millisecond+500*time.Microsecond)
 
@@ -120,8 +115,6 @@ func TestAntiFraudConsumerMany(t *testing.T) {
 }
 
 func TestAntiFraudConsumerNotCalledFn(t *testing.T) {
-	t.Parallel()
-
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 
@@ -150,8 +143,6 @@ func TestAntiFraudConsumerNotCalledFn(t *testing.T) {
 }
 
 func TestAntiFraudConsumerErr(t *testing.T) {
-	t.Parallel()
-
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Millisecond)
 

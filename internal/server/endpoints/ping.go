@@ -1,19 +1,16 @@
 package endpoints
 
 import (
-	"context"
 	"net/http"
+
+	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-type Pinger interface {
-	Ping(ctx context.Context) error
-}
-
-func Ping(p Pinger) http.HandlerFunc {
+func Ping(storager storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		err := p.Ping(ctx)
+		err := storager.Ping(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 

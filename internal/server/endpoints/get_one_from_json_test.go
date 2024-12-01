@@ -2,120 +2,116 @@ package endpoints_test
 
 import (
 	"bytes"
-	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	gomock "go.uber.org/mock/gomock"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/internal/storages"
+	"github.com/novoseltcev/go-course/mocks"
 )
 
 func TestGetOneMetricFromJSON(t *testing.T) {
 	t.Parallel()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
 
-	var (
-		testValue = 10.123
-		testDelta = int64(10)
-	)
+	type got struct {
+		id   string
+		Type string
+	}
 
-	storage := storages.NewMemStorage()
-	storage.SaveAll(context.TODO(), []schemas.Metric{
+	type want struct {
+		metric *schemas.Metric
+		err    error
+	}
+
+	tests := []struct {
+		name string
+		got
+		want *want
+		code int
+		body string
+	}{
 		{
-			ID:    "test",
-			MType: schemas.Gauge,
-			Value: &testValue,
+			"success gauge",
+			got{id: testID, Type: schemas.Gauge},
+			&want{&testGauge, nil},
+			http.StatusOK,
+			`{"value":10.123,"id":"test","type":"gauge"}`,
 		},
 		{
-			ID:    "test",
-			MType: schemas.Counter,
-			Delta: &testDelta,
+			"success counter",
+			got{id: testID, Type: schemas.Counter},
+			&want{&testCounter, nil},
+			http.StatusOK,
+			`{"delta":10,"id":"test","type":"counter"}`,
 		},
-	})
-	t.Run("should return gauge metric value", func(t *testing.T) {
-		t.Parallel()
+		{
+			"metric not found",
+			got{id: "unknown", Type: schemas.Gauge},
+			&want{nil, storages.ErrNotFound},
+			http.StatusNotFound,
+			"metric not found\n",
+		},
+		{
+			"failed get",
+			got{id: testID, Type: schemas.Gauge},
+			&want{nil, errTest},
+			http.StatusInternalServerError,
+			"failed to get metric\n",
+		},
+		{
+			name: "invalid metric type",
+			got:  got{id: testID, Type: "unknown"},
+			code: http.StatusBadRequest,
+			body: "type is invalid\n",
+		},
+	}
 
-		ts := httptest.NewServer(endpoints.GetOneMetricFromJSON(storage))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			storager := mocks.NewMockMetricStorager(ctrl)
+			router := endpoints.NewAPIRouter(storager)
 
-		defer ts.Close()
+			if tt.want != nil {
+				storager.EXPECT().GetOne(gomock.Any(), tt.got.id, tt.got.Type).Return(tt.want.metric, tt.want.err)
+			}
 
-		resp, body := testRequest(
-			t,
-			ts,
-			http.MethodPost,
-			"/",
-			bytes.NewBufferString(`{"type":"gauge","id":"test"}`),
-		)
+			req := httptest.NewRequest(http.MethodPost, "/value/", bytes.NewBufferString(
+				fmt.Sprintf(`{"type":"%s","id":"%s"}`, tt.got.Type, tt.got.id),
+			))
+			w := httptest.NewRecorder()
 
-		defer resp.Body.Close()
+			router.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-		assert.Equal(t, `{"id":"test","type":"gauge","value":10.123}`, body)
-	})
+			assert.Equal(t, tt.code, w.Code)
+			assert.Equal(t, tt.body, w.Body.String())
+		})
+	}
+}
 
-	t.Run("should return counter metric value", func(t *testing.T) {
-		t.Parallel()
+func TestGetOneMetricFromJSON__contract_error(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
 
-		ts := httptest.NewServer(endpoints.GetOneMetricFromJSON(storage))
+	storager := mocks.NewMockMetricStorager(ctrl)
+	router := endpoints.NewAPIRouter(storager)
 
-		defer ts.Close()
+	storager.EXPECT().GetOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
-		resp, body := testRequest(
-			t,
-			ts,
-			http.MethodPost,
-			"/",
-			bytes.NewBufferString(`{"type":"counter","id":"test"}`),
-		)
+	req := httptest.NewRequest(http.MethodPost, "/value/", bytes.NewBufferString(`{"type}`))
+	w := httptest.NewRecorder()
 
-		defer resp.Body.Close()
+	router.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-		assert.Equal(t, `{"id":"test","type":"counter","delta":10}`, body)
-	})
-
-	t.Run("should return error if metric not found", func(t *testing.T) {
-		t.Parallel()
-
-		ts := httptest.NewServer(endpoints.GetOneMetricFromJSON(storage))
-
-		defer ts.Close()
-
-		resp, body := testRequest(
-			t,
-			ts,
-			http.MethodPost,
-			"/",
-			bytes.NewBufferString(`{"type":"gauge","id":"unknown"}`),
-		)
-
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
-		assert.Equal(t, "metric not found\n", body)
-	})
-
-	t.Run("should return error if metric type is invalid", func(t *testing.T) {
-		t.Parallel()
-
-		ts := httptest.NewServer(endpoints.GetOneMetricFromJSON(storage))
-
-		defer ts.Close()
-
-		resp, body := testRequest(
-			t,
-			ts,
-			http.MethodPost,
-			"/",
-			bytes.NewBufferString(`{"type":"unknown","id":"test"}`),
-		)
-
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-		assert.Equal(t, "invalid metric type\n", body)
-	})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, "parse error: unterminated string literal near offset 7 of '{\"type}'\n", w.Body.String())
 }

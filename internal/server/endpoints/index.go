@@ -1,30 +1,29 @@
 package endpoints
 
 import (
+	"embed"
 	"html/template"
 	"net/http"
 
-	"github.com/novoseltcev/go-course/internal/services"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-func Index(storage storages.MetricStorager) http.HandlerFunc {
+//go:embed "templates/*"
+var templatesFS embed.FS
+
+func Index(storager storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		metrics, err := services.GetAllMetric(ctx, storage)
+		metrics, err := storager.GetAll(r.Context())
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.WithError(err).Error("failed to get metrics")
+			http.Error(w, "failed to get metrics", http.StatusInternalServerError)
 
 			return
 		}
 
-		tmpl, err := template.ParseFiles("templates/index.html")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-
-			return
-		}
+		tmpl := template.Must(template.ParseFS(templatesFS, "templates/index.gohtml"))
 
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)

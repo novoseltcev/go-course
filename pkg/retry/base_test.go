@@ -4,12 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/novoseltcev/go-course/pkg/retry"
 )
 
-var errTest = errors.New("some error")
+var errTest = errors.New("test error")
+
+const testValue = 12
 
 func ExampleDo() {
 	attempts := []time.Duration{time.Microsecond, 3 * time.Microsecond, 5 * time.Microsecond}
@@ -45,13 +51,23 @@ func ExampleDo_error() {
 	// 3 retries were made and return error=retry.Error
 }
 
+func TestDo_withoutOptions(t *testing.T) {
+	t.Parallel()
+
+	err := retry.Do(context.Background(), func() error {
+		return nil
+	}, nil)
+
+	assert.NoError(t, err)
+}
+
 func ExampleDoWithData() {
 	retries := 0
 
 	val, err := retry.DoWithData(context.Background(), func() (int, error) {
 		retries++
 
-		return 12, nil
+		return testValue, nil
 	}, &retry.Options{
 		Attempts: []time.Duration{time.Microsecond},
 		Retries:  3,
@@ -79,4 +95,15 @@ func ExampleDoWithData_error() {
 
 	// Output:
 	// 3 retries were made and return value=0 and error=retry.Error
+}
+
+func TestDoWithData_withoutOptions(t *testing.T) {
+	t.Parallel()
+
+	data, err := retry.DoWithData(context.Background(), func() (int, error) {
+		return testValue, nil
+	}, nil)
+
+	require.NoError(t, err)
+	assert.Equal(t, testValue, data)
 }

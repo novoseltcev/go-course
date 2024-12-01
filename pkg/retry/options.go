@@ -4,8 +4,8 @@ import "time"
 
 // Options is a configuration for retrying a function.
 type Options struct {
-	Retries  uint            // number of attempts
 	Attempts []time.Duration // list of timeouts for each attempt
+	Retries  uint            // number of attempts
 }
 
 // TotalAttempts returns the total number of attempts.

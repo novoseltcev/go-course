@@ -1,3 +1,4 @@
+// middlewares package contains reusable middlewares for http server.
 package middlewares
 
 import (

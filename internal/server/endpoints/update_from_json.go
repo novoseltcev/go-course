@@ -1,42 +1,36 @@
 package endpoints
 
 import (
-	"errors"
 	"net/http"
 
 	json "github.com/mailru/easyjson"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
-	"github.com/novoseltcev/go-course/internal/services"
 	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-func UpdateMetricFromJSON(storage storages.MetricStorager) http.HandlerFunc {
+func UpdateMetricFromJSON(storager storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		var reqBody schemas.Metric
-		if err := json.UnmarshalFromReader(r.Body, &reqBody); err != nil {
+		var metric schemas.Metric
+		if err := json.UnmarshalFromReader(r.Body, &metric); err != nil {
 			log.WithError(err).Error("unmarshalable body")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 
 			return
 		}
 
-		if err := services.SaveMetric(ctx, storage, &reqBody); err != nil {
-			var statusCode int
+		if err := metric.Validate(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 
-			switch {
-			case errors.Is(err, services.ErrInvalidType):
-				statusCode = http.StatusBadRequest
-			case errors.Is(err, services.ErrInvalidValue), errors.Is(err, services.ErrInvalidDelta):
-				statusCode = http.StatusBadRequest
-			default:
-				statusCode = http.StatusInternalServerError
-			}
+			return
+		}
 
-			http.Error(w, err.Error(), statusCode)
+		if err := storager.Save(ctx, &metric); err != nil {
+			log.WithError(err).Error("failed to save metric")
+			http.Error(w, "failed to save metric", http.StatusInternalServerError)
 
 			return
 		}

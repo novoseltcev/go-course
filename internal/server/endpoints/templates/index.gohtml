@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Metrics</title>
+  </head>
+  <body>
+    <div>
+      <h2>Metrics</h2>{{if .}}
+      <ul>{{range .}}
+        <li>
+          <div>{{ if .Delta }}
+            <b>Counter {{ .ID }}</b>: {{ .Delta }}{{else}}
+            <b>Gauge {{ .ID }}</b>: {{ .Value }}{{end}}
+          </div>
+        </li>{{end}}
+      </ul>{{else}}
+      <div>Empty</div>{{end}}
+    </div>
+  </body>
+</html>

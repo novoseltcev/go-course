@@ -38,17 +38,17 @@ func Do(
 func DoWithData[T any](
 	ctx context.Context,
 	retryableFunc retry.RetryableFuncWithData[T],
-	options *Options,
+	opts *Options,
 ) (T, error) {
-	if options == nil {
-		options = &Options{}
+	if opts == nil {
+		opts = &Options{}
 	}
 
 	return retry.DoWithData(
 		retryableFunc,
-		retry.Attempts(options.TotalAttempts()),
+		retry.Attempts(opts.TotalAttempts()),
 		retry.DelayType(func(n uint, _ error, _ *retry.Config) time.Duration {
-			return options.GetAttemptDelay(n)
+			return opts.GetAttemptDelay(n)
 		}),
 		retry.Context(ctx),
 	)

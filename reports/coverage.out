@@ -1,6 +1,6 @@
 github.com/novoseltcev/go-course/cmd/agent/cmd.go:16:					Cmd			0.0%
 github.com/novoseltcev/go-course/cmd/agent/cmd.go:44:					getConfig		0.0%
-github.com/novoseltcev/go-course/cmd/agent/main.go:11:					main			0.0%
+github.com/novoseltcev/go-course/cmd/agent/main.go:14:					main			0.0%
 github.com/novoseltcev/go-course/cmd/server/cmd.go:13:					Cmd			0.0%
 github.com/novoseltcev/go-course/cmd/server/cmd.go:41:					getConfig		0.0%
 github.com/novoseltcev/go-course/cmd/server/main.go:15:					main			0.0%
@@ -69,4 +69,4 @@ github.com/novoseltcev/go-course/pkg/workers/consumer.go:23:				Consumer		100.0%
 github.com/novoseltcev/go-course/pkg/workers/consumer.go:53:				AntiFraudConsumer	100.0%
 github.com/novoseltcev/go-course/pkg/workers/fan_in.go:14:				FanIn			92.9%
 github.com/novoseltcev/go-course/pkg/workers/producer.go:13:				Producer		92.3%
-total:											(statements)		56.2%
+total:											(statements)		55.9%

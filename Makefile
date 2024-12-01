@@ -6,12 +6,12 @@ generate:
 AGENT_DIR=./cmd/agent
 
 build-agent: generate $(AGENT_DIR)/main.go
-	go build -buildvcs=false -o $(AGENT_DIR)/agent $(AGENT_DIR)
+	go build -buildvcs=false -ldflags "-X main.buildVersion=v1.0.0 -X main.buildDate=`date -u +%Y-%m-%d` -X main.buildCommit=`git rev-parse HEAD`" -o $(AGENT_DIR)/agent $(AGENT_DIR)
 
 SERVER_DIR=./cmd/server
 
 build-server: generate $(SERVER_DIR)/main.go
-	go build -buildvcs=false -o $(SERVER_DIR)/server $(SERVER_DIR) 
+	go build -buildvcs=false -ldflags "-X main.buildVersion=v1.0.0 -X main.buildDate=`date -u +%Y-%m-%d` -X main.buildCommit=`git rev-parse HEAD`" -o $(SERVER_DIR)/server $(SERVER_DIR) 
 
 STATICLINT_DIR=./cmd/staticlint
 

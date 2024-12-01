@@ -1,4 +1,52 @@
-// Package staticlint
+// Package staticlint is a multichecker with custom checks.
+//
+// Usage:
+//
+//	./cmd/staticlint [path...]
+//
+// Checks:
+//   - appends: Check append usage
+//   - assign: Check useless assignments
+//   - atomic: Check usage of sync/atomic usage
+//   - atomicalign: Check alignment for sync/atomic value
+//   - bools: Check errors in boolean ops
+//   - buildtag: Check go:build
+//   - composite: Check struct args
+//   - copylock: Check copy of locks
+//   - defers: Check defer calls
+//   - directive: Check go:build and go:debug
+//   - errorsas: Check errors.As
+//   - findcall: Check partitional calls
+//   - httpmux: Check new http/mux syntax for go1.22
+//   - httpresponse: Check defer body.Close()
+//   - ifaceassert: Check imposible type asserts
+//   - loopclosure: Check usage loop value in closure
+//   - lostcancel: Check lost cancel call
+//   - nilfunc: Check useless nil comparisons
+//   - nilness: Check imposible nil comparisons
+//   - pkgfact: Check package facts
+//   - printf: Check printf calls
+//   - shadow: Check shadowed variables
+//   - shift: Check integer shifts
+//   - sigchanyzer: Check channel buffer for os.Signal
+//   - sortslice: Check sort.Slice argument type
+//   - stdmethods: Check std methods naming
+//   - stdversion: Check
+//   - stringintconv: Check string(int) conversions
+//   - structtag: Check struct tags
+//   - testinggoroutine: Check t.Fatal from goroutines
+//   - tests: Check common tests errors
+//   - timeformat: Check timeformat
+//   - unmarshal: Check usage interface or pointer marshaling
+//   - unreachable: Check unreachable code
+//   - unsafeptr: Check convertation to unsafe.Pointer
+//   - unusedresult: Check unused func result
+//   - unusedwrite: Check never readed writer
+//   - usesgenerics: Check allow to use generic
+//   - noexit: Check os.Exit usage in main function of main packaged
+//   - canonicalheader: Check usage http.Header
+//   - errname: Check errors naming
+//   - staticcheck[SA*, ST1000]: Security checks from staticcheck
 package main
 
 import (

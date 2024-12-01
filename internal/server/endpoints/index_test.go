@@ -13,13 +13,10 @@ import (
 	"github.com/novoseltcev/go-course/mocks"
 )
 
-// nolint: paralleltest
 func TestIndex(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
-
-	storager := mocks.NewMockMetricStorager(ctrl)
-	router := endpoints.NewAPIRouter(storager)
 
 	type want struct {
 		metrics []schemas.Metric
@@ -91,6 +88,10 @@ func TestIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			storager := mocks.NewMockMetricStorager(ctrl)
+			router := endpoints.NewAPIRouter(storager)
+
 			storager.EXPECT().GetAll(gomock.Any()).Return(tt.want.metrics, tt.want.err)
 
 			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)

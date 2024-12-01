@@ -18,9 +18,6 @@ func TestUpdateMetric(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
-	storager := mocks.NewMockMetricStorager(ctrl)
-	router := endpoints.NewAPIRouter(storager)
-
 	tests := []struct {
 		name   string
 		url    string
@@ -72,6 +69,8 @@ func TestUpdateMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			storager := mocks.NewMockMetricStorager(ctrl)
+			router := endpoints.NewAPIRouter(storager)
 
 			if tt.metric != nil {
 				storager.EXPECT().Save(gomock.Any(), tt.metric).Return(tt.err)

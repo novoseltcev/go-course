@@ -57,14 +57,15 @@ lint: build-staticlint
 
 COVERAGE_PROFILE=reports/profile.cov
 test:
-	go test -v -coverprofile=$(COVERAGE_PROFILE) -bench=. -benchmem ./...
+	go clean -testcache
+	go test -coverprofile=$(COVERAGE_PROFILE) -bench=. -benchmem ./...
 	grep -v -E -f .covignore $(COVERAGE_PROFILE) > $(COVERAGE_PROFILE).filtered && mv $(COVERAGE_PROFILE).filtered $(COVERAGE_PROFILE)
 
 cover:
-	go tool cover -func=$(COVERAGE_PROFILE)
+	go tool cover -func=$(COVERAGE_PROFILE) -o reports/coverage.out
 
 cover-html:
-	go tool cover -html=$(COVERAGE_PROFILE)
+	go tool cover -html=$(COVERAGE_PROFILE) -o reports/coverage.html
 
 docs:
 	pkgsite -http=:8080

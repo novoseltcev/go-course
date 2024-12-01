@@ -18,9 +18,6 @@ func TestPing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
-	storager := mocks.NewMockMetricStorager(ctrl)
-	router := endpoints.NewAPIRouter(storager)
-
 	tests := []struct {
 		name string
 		err  error
@@ -33,6 +30,8 @@ func TestPing(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			storager := mocks.NewMockMetricStorager(ctrl)
+			router := endpoints.NewAPIRouter(storager)
 
 			storager.EXPECT().Ping(gomock.Any()).Return(tt.err)
 

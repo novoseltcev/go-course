@@ -21,9 +21,6 @@ func TestGetOneMetricFromJSON(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
-	storager := mocks.NewMockMetricStorager(ctrl)
-	router := endpoints.NewAPIRouter(storager)
-
 	type got struct {
 		id   string
 		Type string
@@ -80,6 +77,8 @@ func TestGetOneMetricFromJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			storager := mocks.NewMockMetricStorager(ctrl)
+			router := endpoints.NewAPIRouter(storager)
 
 			if tt.want != nil {
 				storager.EXPECT().GetOne(gomock.Any(), tt.got.id, tt.got.Type).Return(tt.want.metric, tt.want.err)

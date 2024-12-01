@@ -19,9 +19,6 @@ func TestUpdateBatch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
-	storager := mocks.NewMockMetricStorager(ctrl)
-	router := endpoints.NewAPIRouter(storager)
-
 	type got struct {
 		body  string
 		batch []schemas.Metric
@@ -79,6 +76,8 @@ func TestUpdateBatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			storager := mocks.NewMockMetricStorager(ctrl)
+			router := endpoints.NewAPIRouter(storager)
 
 			if tt.got.batch != nil {
 				storager.EXPECT().SaveBatch(gomock.Any(), tt.got.batch).Times(1).Return(tt.err)

@@ -6,53 +6,63 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
-	"github.com/novoseltcev/go-course/internal/services"
 	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-func UpdateMetric(storage storages.MetricStorager) http.HandlerFunc {
+func UpdateMetric(storager storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		metricType := chi.URLParam(r, "metricType")
-		metricName := chi.URLParam(r, "metricName")
-		metricValue := chi.URLParam(r, "metricValue")
+		Type := chi.URLParam(r, "type")
+		id := chi.URLParam(r, "id")
+		value := chi.URLParam(r, "value")
 
-		metric := schemas.Metric{ID: metricName, MType: metricType}
+		metric, err := validateUpdate(Type, id, value)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 
-		if metricType == schemas.Gauge {
-			value, err := strconv.ParseFloat(metricValue, 64)
-			if err == nil {
-				metric.Value = &value
-			}
+			return
 		}
 
-		if metricType == schemas.Counter {
-			value, err := strconv.ParseInt(metricValue, 10, 64)
-			if err == nil {
-				metric.Delta = &value
-			}
-		}
-
-		if err := services.SaveMetric(ctx, storage, &metric); err != nil {
-			var statusCode int
-
-			switch {
-			case errors.Is(err, services.ErrInvalidType):
-				statusCode = http.StatusBadRequest
-			case errors.Is(err, services.ErrInvalidValue), errors.Is(err, services.ErrInvalidDelta):
-				statusCode = http.StatusBadRequest
-			default:
-				statusCode = http.StatusInternalServerError
-			}
-
-			http.Error(w, err.Error(), statusCode)
+		if err := storager.Save(ctx, metric); err != nil {
+			log.WithError(err).Error("failed to save metric")
+			http.Error(w, "failed to save metric", http.StatusInternalServerError)
 
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+// nolint: err113
+func validateUpdate(mType, id, value string) (*schemas.Metric, error) {
+	result := schemas.Metric{ID: id, MType: mType}
+
+	if mType == schemas.Gauge {
+		value, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return nil, errors.New("invalid value")
+		}
+
+		result.Value = &value
+	}
+
+	if mType == schemas.Counter {
+		value, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return nil, errors.New("invalid delta")
+		}
+
+		result.Delta = &value
+	}
+
+	if err := result.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }

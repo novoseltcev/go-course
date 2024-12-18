@@ -26,7 +26,7 @@ func Cmd() *cobra.Command {
 			config.PollInterval *= time.Second
 			config.RateLimit *= time.Second
 
-			a := agent.NewAgent(*config)
+			a := agent.NewAgent(config)
 			ctx, _ := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
 			a.Start(ctx)
 		},

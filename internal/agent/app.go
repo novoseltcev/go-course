@@ -13,14 +13,14 @@ import (
 )
 
 type Agent struct {
-	config Config
-	client http.Client
+	config *Config
+	client *http.Client
 }
 
-func NewAgent(config Config) *Agent {
+func NewAgent(config *Config) *Agent {
 	return &Agent{
 		config: config,
-		client: *http.DefaultClient,
+		client: http.DefaultClient,
 	}
 }
 
@@ -30,7 +30,7 @@ func (s *Agent) Start(ctx context.Context) {
 
 	metricCh := workers.FanIn(ctx, runtimeMetricCh, coreMetricCh)
 
-	reporter := reporters.NewAPIReporter(http.DefaultClient, "http://"+s.config.Address, s.config.SecretKey)
+	reporter := reporters.NewAPIReporter(s.client, "http://"+s.config.Address, s.config.SecretKey)
 	go workers.AntiFraudConsumer(ctx, metricCh, reporter.Report, s.config.RateLimit)
 
 	if err := http.ListenAndServe(":9000", nil); err != nil {

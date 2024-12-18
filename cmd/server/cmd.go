@@ -30,7 +30,7 @@ func Cmd() *cobra.Command {
 	flags := cmd.Flags()
 	flags.StringP("a", "a", ":8080", "Server address")
 	flags.StringP("d", "d", "", "Database connection string")
-	flags.IntP("s", "s", 0, "backup interval")
+	flags.Int8P("s", "s", 0, "backup interval")
 	flags.StringP("f", "f", "/tmp/metrics-db.json", "path to backup")
 	flags.BoolP("r", "r", true, "restore from backup after restart")
 	flags.StringP("k", "k", "", "Secret key for hashing data")
@@ -44,7 +44,7 @@ func getConfig(flags *pflag.FlagSet) (*server.Config, error) {
 		return nil, err
 	}
 
-	storeInterval, err := flags.GetInt("s")
+	storeInterval, err := flags.GetInt8("s")
 	if err != nil {
 		return nil, err
 	}

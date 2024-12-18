@@ -9,54 +9,74 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
-	"github.com/novoseltcev/go-course/internal/services"
 	"github.com/novoseltcev/go-course/internal/storages"
 )
 
-func GetOneMetric(storage storages.MetricStorager) http.HandlerFunc {
+func GetOneMetric(storager storages.MetricStorager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		metricType := chi.URLParam(r, "metricType")
-		metricName := chi.URLParam(r, "metricName")
+		reqData := schemas.MetricIdentifier{
+			ID:    chi.URLParam(r, "id"),
+			MType: chi.URLParam(r, "type"),
+		}
 
-		result, err := services.GetMetric(ctx, storage, metricName, metricType)
-		if err != nil {
-			var statusCode int
-
-			switch {
-			case errors.Is(err, services.ErrInvalidType):
-				statusCode = http.StatusBadRequest
-			case errors.Is(err, services.ErrMetricNotFound):
-				statusCode = http.StatusNotFound
-			default:
-				statusCode = http.StatusInternalServerError
-			}
-
-			http.Error(w, err.Error(), statusCode)
+		if err := reqData.Validate(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 
 			return
 		}
 
-		var metricValue string
+		metric, err := storager.GetOne(ctx, reqData.ID, reqData.MType)
+		if err != nil {
+			if errors.Is(err, storages.ErrNotFound) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+			} else {
+				log.WithField("id", reqData.ID).WithField("type", reqData.MType).WithError(err).Error("failed to get metric")
+				http.Error(w, "failed to get metric", http.StatusInternalServerError)
+			}
 
-		switch metricType {
-		case schemas.Gauge:
-			metricValue = strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", *result.Value), "0"), ".")
-		case schemas.Counter:
-			metricValue = strconv.Itoa(int(*result.Delta))
-		default:
-			panic("unreachable")
+			return
 		}
 
-		if _, err := io.WriteString(w, metricValue); err != nil {
+		result, err := serialize(metric)
+		if err != nil {
+			log.WithError(err).Error("failed to serialize metric")
+			http.Error(w, "failed to serialize", http.StatusInternalServerError)
+
+			return
+		}
+
+		if _, err := io.WriteString(w, result); err != nil {
+			log.WithError(err).Error("failed to write metric")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+// nolint: err113
+func serialize(metric *schemas.Metric) (string, error) {
+	switch metric.MType {
+	case schemas.Gauge:
+		if metric.Value == nil {
+			return "", errors.New("value is nil")
+		}
+
+		return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", *metric.Value), "0"), "."), nil
+	case schemas.Counter:
+		if metric.Delta == nil {
+			return "", errors.New("delta is nil")
+		}
+
+		return strconv.Itoa(int(*metric.Delta)), nil
+	default:
+		return "", errors.New("type is invalid")
 	}
 }

@@ -14,27 +14,27 @@ type PgStorage struct {
 	DB *sqlx.DB
 }
 
-func NewPgStorage(url string) (*PgStorage, error) {
+func NewPgStorage(url string) *PgStorage {
 	db, err := sqlx.Open("pgx", url)
 	if err != nil {
-		return nil, err
+		panic(errors.Join(err, errors.New("failed to open database"))) //nolint: err113
 	}
 
-	return &PgStorage{DB: db}, nil
+	return &PgStorage{DB: db}
 }
 
-func (s *PgStorage) GetByName(ctx context.Context, name, metricType string) (*schemas.Metric, error) {
+func (s *PgStorage) GetOne(ctx context.Context, id, mType string) (*schemas.Metric, error) {
 	var result schemas.Metric
 	err := s.DB.GetContext(
 		ctx,
 		&result,
 		"SELECT name, type, value, delta FROM metrics WHERE type = $1 AND name = $2",
-		metricType,
-		name,
+		mType,
+		id,
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return &result, nil
+		return nil, errors.Join(err, ErrNotFound)
 	}
 
 	return &result, err
@@ -67,7 +67,7 @@ func (s *PgStorage) Save(ctx context.Context, metric *schemas.Metric) error {
 	return nil
 }
 
-func (s *PgStorage) SaveAll(ctx context.Context, metrics []schemas.Metric) error {
+func (s *PgStorage) SaveBatch(ctx context.Context, metrics []schemas.Metric) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err

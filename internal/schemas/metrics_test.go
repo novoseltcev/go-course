@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
+	"github.com/novoseltcev/go-course/pkg/testutils"
 )
 
 func TestMetric_Validate(t *testing.T) {
 	t.Parallel()
 
 	var (
-		testID    = "test"
 		testDelta = int64(1)
 		testValue = float64(1)
 	)
@@ -26,7 +26,7 @@ func TestMetric_Validate(t *testing.T) {
 		{
 			name: "valid gauge",
 			metric: &schemas.Metric{
-				ID:    testID,
+				ID:    testutils.STRING,
 				MType: schemas.Gauge,
 				Value: &testValue,
 			},
@@ -35,7 +35,7 @@ func TestMetric_Validate(t *testing.T) {
 		{
 			name: "valid counter",
 			metric: &schemas.Metric{
-				ID:    testID,
+				ID:    testutils.STRING,
 				MType: schemas.Counter,
 				Delta: &testDelta,
 			},
@@ -49,7 +49,7 @@ func TestMetric_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			metric: &schemas.Metric{
-				ID:    testID,
+				ID:    testutils.STRING,
 				MType: "unknown",
 			},
 			wantErr: errors.New("type is invalid"),

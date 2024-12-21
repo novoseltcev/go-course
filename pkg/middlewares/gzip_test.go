@@ -8,101 +8,82 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/novoseltcev/go-course/pkg/middlewares"
+	"github.com/novoseltcev/go-course/pkg/testutils"
+	"github.com/novoseltcev/go-course/pkg/testutils/helpers"
 )
 
-func testWebhook(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-
-		return
-	}
-	defer r.Body.Close()
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(body)
-}
-
-const testGzipCompression = `{"ping": "pong"}`
-
-func TestGzipCompressionWithoutAcceptEncoding(t *testing.T) {
-	t.Parallel()
-
-	srv := httptest.NewServer(middlewares.Gzip(http.HandlerFunc(testWebhook)))
-
-	defer srv.Close()
-
-	r := httptest.NewRequest(http.MethodPost, srv.URL, bytes.NewBufferString(testGzipCompression))
-	r.RequestURI = ""
-	r.Header.Set("Accept-Encoding", "")
-
-	resp, err := http.DefaultClient.Do(r)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	defer resp.Body.Close()
-
-	b, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.JSONEq(t, testGzipCompression, string(b))
-}
-
-func TestGzipCompressionSend(t *testing.T) {
-	t.Parallel()
-
-	srv := httptest.NewServer(middlewares.Gzip(http.HandlerFunc(testWebhook)))
-
-	defer srv.Close()
+func compress(t *testing.T, body []byte) []byte {
+	t.Helper()
 
 	buf := bytes.NewBuffer(nil)
+
 	zb := gzip.NewWriter(buf)
-	_, err := zb.Write([]byte(testGzipCompression))
-	require.NoError(t, err)
-	err = zb.Close()
+	zb.Write(body)
+	zb.Close()
 
-	require.NoError(t, err)
-
-	r := httptest.NewRequest(http.MethodPost, srv.URL, buf)
-	r.RequestURI = ""
-	r.Header.Set("Content-Encoding", "gzip")
-	r.Header.Set("Accept-Encoding", "")
-
-	resp, err := http.DefaultClient.Do(r)
-	require.NoError(t, err)
-
-	defer resp.Body.Close()
-
-	b, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.JSONEq(t, testGzipCompression, string(b))
+	return buf.Bytes()
 }
 
-func TestGzipCompressionAccept(t *testing.T) {
-	t.Parallel()
+func uncompress(t *testing.T, body []byte) []byte {
+	t.Helper()
 
-	srv := httptest.NewServer(middlewares.Gzip(http.HandlerFunc(testWebhook)))
-
-	defer srv.Close()
-
-	r := httptest.NewRequest(http.MethodPost, srv.URL, bytes.NewBufferString(testGzipCompression))
-	r.RequestURI = ""
-
-	r.Header.Set("Content-Type", "application/json")
-	r.Header.Set("Accept-Encoding", "gzip")
-
-	resp, err := http.DefaultClient.Do(r)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	defer resp.Body.Close()
-
-	zr, err := gzip.NewReader(resp.Body)
+	zr, err := gzip.NewReader(bytes.NewBuffer(body))
 	require.NoError(t, err)
 
 	b, err := io.ReadAll(zr)
 	require.NoError(t, err)
-	require.JSONEq(t, testGzipCompression, string(b))
+
+	return b
+}
+
+func TestGzipUnencoded(t *testing.T) {
+	t.Parallel()
+
+	ts := httptest.NewServer(middlewares.Gzip(helpers.Webhook(t)))
+	defer ts.Close()
+
+	resp := helpers.SendRequest(t, ts, bytes.NewBufferString(testutils.JSON), nil)
+	defer resp.Body.Close()
+	body := helpers.ReadBody(t, resp.Body)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.JSONEq(t, testutils.JSON, string(body))
+}
+
+func TestGzipEncodedAccept(t *testing.T) {
+	t.Parallel()
+
+	ts := httptest.NewServer(middlewares.Gzip(helpers.Webhook(t)))
+	defer ts.Close()
+
+	resp := helpers.SendRequest(t, ts,
+		bytes.NewBufferString(testutils.JSON),
+		map[string]string{"Accept-Encoding": "gzip"},
+	)
+	defer resp.Body.Close()
+	body := helpers.ReadBody(t, resp.Body)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.JSONEq(t, testutils.JSON, string(uncompress(t, body)))
+}
+
+func TestGzipEncodedContent(t *testing.T) {
+	t.Parallel()
+
+	ts := httptest.NewServer(middlewares.Gzip(helpers.Webhook(t)))
+	defer ts.Close()
+
+	resp := helpers.SendRequest(t, ts,
+		bytes.NewBuffer(compress(t, []byte(testutils.JSON))),
+		map[string]string{"Content-Encoding": "gzip"},
+	)
+	defer resp.Body.Close()
+	body := helpers.ReadBody(t, resp.Body)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.JSONEq(t, testutils.JSON, string(body))
 }

@@ -2,15 +2,15 @@ package endpoints_test
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/steinfletcher/apitest"
 	gomock "go.uber.org/mock/gomock"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/mocks"
+	"github.com/novoseltcev/go-course/pkg/testutils"
 )
 
 func TestIndex(t *testing.T) {
@@ -45,12 +45,12 @@ func TestIndex(t *testing.T) {
       <ul>
         <li>
           <div>
-            <b>Counter test</b>: 10
+            <b>Counter string</b>: 10
           </div>
         </li>
         <li>
           <div>
-            <b>Gauge test</b>: 10.123
+            <b>Gauge string</b>: 10.123
           </div>
         </li>
       </ul>
@@ -80,7 +80,7 @@ func TestIndex(t *testing.T) {
 		},
 		{
 			"failed get",
-			want{nil, errTest},
+			want{nil, testutils.Err},
 			http.StatusInternalServerError,
 			"failed to get metrics\n",
 		},
@@ -90,17 +90,15 @@ func TestIndex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			storager := mocks.NewMockMetricStorager(ctrl)
-			router := endpoints.NewAPIRouter(storager)
-
 			storager.EXPECT().GetAll(gomock.Any()).Return(tt.want.metrics, tt.want.err)
 
-			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-			w := httptest.NewRecorder()
-
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, tt.code, w.Code)
-			assert.Equal(t, tt.body, w.Body.String())
+			apitest.New().
+				Handler(endpoints.NewAPIRouter(storager)).
+				Get("/").
+				Expect(t).
+				Status(tt.code).
+				Body(tt.body).
+				End()
 		})
 	}
 }

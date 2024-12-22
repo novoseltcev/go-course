@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// nolint: gochecknoglobals
+//nolint: gochecknoglobals
 var (
 	buildVersion string
 	buildDate    string

@@ -1,9 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/caarlos0/env/v10"
 	log "github.com/sirupsen/logrus"
@@ -14,64 +15,60 @@ import (
 )
 
 func Cmd() *cobra.Command {
+	var configFile string
+
+	cfg := &agent.Config{} //nolint:exhaustruct
 	cmd := &cobra.Command{
 		Use:   "agent",
 		Short: "Use this command to run agent",
 		Run: func(cmd *cobra.Command, _ []string) {
-			config, err := getConfig(cmd.Flags())
-			if err != nil {
+			if err := parseConfig(cfg, configFile, cmd.Flags()); err != nil {
 				log.Fatal(err)
 			}
 
-			config.PollInterval *= time.Second
-			config.RateLimit *= time.Second
-
-			a := agent.NewAgent(config)
-			ctx, _ := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
+			a := agent.NewAgent(cfg)
+			ctx, cancel := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+			defer cancel()
 			a.Start(ctx)
 		},
 	}
 
 	flags := cmd.Flags()
-	flags.StringP("a", "a", "localhost:8080", "Server address")
-	flags.IntP("p", "p", 0, "poll runtime metrics interval")
-	flags.IntP("r", "r", 0, "rate limit to send metrics")
-	flags.StringP("k", "k", "", "Secret key for hashing data")
+	flags.StringVarP(&configFile, "config", "c", "", "Path to config file")
+	flags.StringVarP(&cfg.Address, "a", "a", cfg.Address, "Server address")
+	flags.StringVarP(&cfg.RawPollInterval, "p", "p", cfg.RawPollInterval, "Poll runtime metrics interval")
+	flags.StringVarP(&cfg.RawReportInterval, "r", "r", cfg.RawReportInterval, "Rate limit to send metrics")
+	flags.StringVarP(&cfg.SecretKey, "k", "k", cfg.SecretKey, "Secret key for hashing data")
+	flags.StringVar(&cfg.CryptoKey, "crypto-key", cfg.CryptoKey, "Path to public key to encrypt data")
 
 	return cmd
 }
 
-func getConfig(flags *pflag.FlagSet) (*agent.Config, error) {
-	address, err := flags.GetString("a")
-	if err != nil {
-		return nil, err
+func parseConfig(cfg *agent.Config, path string, flags *pflag.FlagSet) error {
+	if path != "" {
+		fd, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+
+		defer fd.Close()
+
+		if err := json.NewDecoder(fd).Decode(cfg); err != nil {
+			return err
+		}
 	}
 
-	pollInterval, err := flags.GetInt("p")
-	if err != nil {
-		return nil, err
+	if err := flags.Parse(os.Args[1:]); err != nil {
+		return err
 	}
 
-	rateLimit, err := flags.GetInt("r")
-	if err != nil {
-		return nil, err
+	if err := env.Parse(cfg); err != nil {
+		return err
 	}
 
-	secretKey, err := flags.GetString("k")
-	if err != nil {
-		return nil, err
+	if err := cfg.FinishParse(); err != nil {
+		return err
 	}
 
-	config := agent.Config{
-		Address:      address,
-		PollInterval: time.Duration(pollInterval),
-		RateLimit:    time.Duration(rateLimit),
-		SecretKey:    secretKey,
-	}
-
-	if err := env.Parse(&config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
+	return nil
 }

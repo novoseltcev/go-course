@@ -3,10 +3,9 @@ package endpoints_test
 import (
 	"errors"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/steinfletcher/apitest"
 	gomock "go.uber.org/mock/gomock"
 
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
@@ -31,16 +30,13 @@ func TestPing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			storager := mocks.NewMockMetricStorager(ctrl)
-			router := endpoints.NewAPIRouter(storager)
-
 			storager.EXPECT().Ping(gomock.Any()).Return(tt.err)
 
-			req := httptest.NewRequest(http.MethodGet, "/ping", nil)
-			w := httptest.NewRecorder()
-
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, tt.code, w.Code)
+			apitest.New().
+				Handler(endpoints.NewAPIRouter(storager)).
+				Get("/ping").
+				Expect(t).
+				Status(tt.code)
 		})
 	}
 }

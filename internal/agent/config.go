@@ -7,4 +7,5 @@ type Config struct {
 	SecretKey    string        `env:"KEY"`
 	PollInterval time.Duration `env:"POLL_INTERVAL"`
 	RateLimit    time.Duration `env:"REPORT_INTERVAL"`
+	CryptoKey    string        `env:"CRYPTO_KEY,file"`
 }

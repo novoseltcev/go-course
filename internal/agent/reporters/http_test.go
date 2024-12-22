@@ -89,14 +89,17 @@ func TestReportSuccessWithOptions(t *testing.T) {
 	defer gock.Off()
 
 	hasher := NewMockhasher(ctrl)
+	encryptor := NewMockencryptor(ctrl)
 	compressor := NewMockcompressor(ctrl)
 	reporter := reporters.NewHTTPClient(
 		http.DefaultClient,
 		testutils.URL,
 		reporters.WithCheckSum(hasher),
+		reporters.WithEncryption(encryptor),
 		reporters.WithCompression(compressor),
 	)
 
+	encryptor.EXPECT().Encrypt([]byte(`[]`)).Return([]byte{1, 2, 3}, nil)
 	compressor.EXPECT().Compress([]byte{1, 2, 3}).Return([]byte{4, 5}, nil)
 	hasher.EXPECT().GetHash([]byte{4, 5}).Return([]byte{6}, nil)
 	gock.New(testutils.URL).
@@ -134,6 +137,22 @@ func TestReportFailedRetries(t *testing.T) {
 	assert.ErrorContains(t,
 		reporter.Report(context.TODO(), []schemas.Metric{}),
 		"error during send request: All attempts fail:",
+	)
+}
+
+func TestReportFailedEncription(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	enc := NewMockencryptor(ctrl)
+	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithEncryption(enc))
+
+	enc.EXPECT().Encrypt([]byte(`[]`)).Return(nil, testutils.Err)
+
+	assert.EqualError(t,
+		reporter.Report(context.TODO(), []schemas.Metric{}),
+		"cannot encrypt metrics: "+testutils.Err.Error(),
 	)
 }
 

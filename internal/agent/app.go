@@ -13,6 +13,7 @@ import (
 	"github.com/novoseltcev/go-course/internal/agent/collectors"
 	"github.com/novoseltcev/go-course/internal/agent/reporters"
 	"github.com/novoseltcev/go-course/pkg/compress"
+	"github.com/novoseltcev/go-course/pkg/cryptoalg"
 	"github.com/novoseltcev/go-course/pkg/hash"
 	"github.com/novoseltcev/go-course/pkg/retry"
 	"github.com/novoseltcev/go-course/pkg/workers"
@@ -35,6 +36,15 @@ func NewAgent(cfg *Config) *Agent {
 			Retries:  3, //nolint:mnd
 			Attempts: []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
 		}),
+	}
+
+	if cfg.CryptoKey != "" {
+		enc, err := cryptoalg.NewPKCS1v15EncryptorFromFile(cfg.CryptoKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		opts = append(opts, reporters.WithEncryption(enc))
 	}
 
 	if cfg.SecretKey != "" {

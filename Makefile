@@ -27,7 +27,7 @@ staticlint: build-staticlint $(STATICLINT_DIR)/staticlint
 
 .PHONY: agent
 agent: $(AGENT_DIR)/agent
-	$(AGENT_DIR)/agent -a 0.0.0.0:8080 -p 2 -r 5 --crypto-key ./keys/public.pem
+	$(AGENT_DIR)/agent -a http://0.0.0.0:8080 -p 2 -r 5 --crypto-key ./keys/public.pem
 
 DATABASE_URI=postgresql://postgres:postgres@0.0.0.0:5432/praktikum?sslmode=disable
 .PHONY: server

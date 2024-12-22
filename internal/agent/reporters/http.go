@@ -21,6 +21,10 @@ type (
 		Compress(data []byte) ([]byte, error)
 	}
 
+	encryptor interface {
+		Encrypt(data []byte) ([]byte, error)
+	}
+
 	hasher interface {
 		GetHash(data []byte) ([]byte, error)
 	}
@@ -32,6 +36,7 @@ type ReportClient struct {
 	c         *http.Client
 	retryOpts *retry.Options
 	baseURL   string
+	enc       encryptor
 	cmp       compressor
 	hr        hasher
 }
@@ -40,6 +45,13 @@ type ReportClient struct {
 func WithRetry(opts retry.Options) Option {
 	return func(r *ReportClient) {
 		r.retryOpts = &opts
+	}
+}
+
+// WithEncryption enables encryption of the request body.
+func WithEncryption(enc encryptor) Option {
+	return func(r *ReportClient) {
+		r.enc = enc
 	}
 }
 
@@ -81,6 +93,13 @@ func (rc *ReportClient) prepareData(metrics []schemas.Metric) ([]byte, error) {
 	b, err := json.Marshal(metrics)
 	if err != nil {
 		return nil, fmt.Errorf("cannot marshal metrics: %w", err)
+	}
+
+	if rc.enc != nil {
+		b, err = rc.enc.Encrypt(b)
+		if err != nil {
+			return nil, fmt.Errorf("cannot encrypt metrics: %w", err)
+		}
 	}
 
 	if rc.cmp != nil {

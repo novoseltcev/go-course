@@ -14,6 +14,7 @@ import (
 
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/internal/storages"
+	"github.com/novoseltcev/go-course/pkg/cryptoalg"
 	"github.com/novoseltcev/go-course/pkg/middlewares"
 )
 
@@ -71,6 +72,13 @@ func (s *Server) GetRouter() http.Handler {
 	}
 
 	r.Use(middlewares.Gzip)
+
+	decryptor, err := cryptoalg.NewPKCS1v15DecryptorFromFile(s.config.CryptoKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r.Use(middlewares.Decrypt(decryptor))
 
 	if s.config.SecretKey != "" {
 		r.Use(middlewares.Sign(s.config.SecretKey))

@@ -54,6 +54,45 @@ func (mr *MockcompressorMockRecorder) Compress(data any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Compress", reflect.TypeOf((*Mockcompressor)(nil).Compress), data)
 }
 
+// Mockencryptor is a mock of encryptor interface.
+type Mockencryptor struct {
+	ctrl     *gomock.Controller
+	recorder *MockencryptorMockRecorder
+	isgomock struct{}
+}
+
+// MockencryptorMockRecorder is the mock recorder for Mockencryptor.
+type MockencryptorMockRecorder struct {
+	mock *Mockencryptor
+}
+
+// NewMockencryptor creates a new mock instance.
+func NewMockencryptor(ctrl *gomock.Controller) *Mockencryptor {
+	mock := &Mockencryptor{ctrl: ctrl}
+	mock.recorder = &MockencryptorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockencryptor) EXPECT() *MockencryptorMockRecorder {
+	return m.recorder
+}
+
+// Encrypt mocks base method.
+func (m *Mockencryptor) Encrypt(data []byte) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Encrypt", data)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Encrypt indicates an expected call of Encrypt.
+func (mr *MockencryptorMockRecorder) Encrypt(data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encrypt", reflect.TypeOf((*Mockencryptor)(nil).Encrypt), data)
+}
+
 // Mockhasher is a mock of hasher interface.
 type Mockhasher struct {
 	ctrl     *gomock.Controller

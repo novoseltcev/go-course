@@ -1,7 +1,6 @@
 package endpoints
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -38,14 +37,13 @@ func UpdateMetric(storager storages.MetricStorager) http.HandlerFunc {
 	}
 }
 
-// nolint: err113
 func validateUpdate(mType, id, value string) (*schemas.Metric, error) {
 	result := schemas.Metric{ID: id, MType: mType}
 
 	if mType == schemas.Gauge {
 		value, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return nil, errors.New("invalid value")
+			return nil, schemas.ErrInvalidValue
 		}
 
 		result.Value = &value
@@ -54,7 +52,7 @@ func validateUpdate(mType, id, value string) (*schemas.Metric, error) {
 	if mType == schemas.Counter {
 		value, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return nil, errors.New("invalid delta")
+			return nil, schemas.ErrInvalidDelta
 		}
 
 		result.Delta = &value

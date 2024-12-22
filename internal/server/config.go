@@ -7,4 +7,5 @@ type Config struct {
 	SecretKey       string `env:"KEY"`
 	StoreInterval   int8   `env:"STORE_INTERVAL"`
 	Restore         bool   `env:"RESTORE"`
+	CryptoKey       string `env:"CRYPTO_KEY,file"`
 }

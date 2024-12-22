@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
+	"os"
 
 	"github.com/caarlos0/env/v10"
 	"github.com/spf13/cobra"
@@ -11,16 +13,18 @@ import (
 )
 
 func Cmd() *cobra.Command {
+	var configFile string
+
+	cfg := &server.Config{} //nolint:exhaustruct
 	cmd := &cobra.Command{
 		Use:   "server",
 		Short: "Use this command to run server",
 		Run: func(cmd *cobra.Command, _ []string) {
-			config, err := getConfig(cmd.Flags())
-			if err != nil {
+			if err := parseConfig(cfg, configFile, cmd.Flags()); err != nil {
 				log.Fatal(err)
 			}
 
-			s := server.NewServer(config)
+			s := server.NewServer(cfg)
 			if err := s.Start(); err != nil {
 				log.Fatal(err)
 			}
@@ -28,66 +32,43 @@ func Cmd() *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.StringP("a", "a", ":8080", "Server address")
-	flags.StringP("d", "d", "", "Database connection string")
-	flags.Int8P("s", "s", 0, "backup interval")
-	flags.StringP("f", "f", "/tmp/metrics-db.json", "path to backup")
-	flags.BoolP("r", "r", true, "restore from backup after restart")
-	flags.StringP("k", "k", "", "Secret key for hashing data")
-	flags.String("crypto-key", "", "Path to private key for decrypt data")
+	flags.StringVarP(&configFile, "config", "c", "", "Path to config file")
+	flags.StringVarP(&cfg.Address, "a", "a", cfg.Address, "Server address")
+	flags.StringVarP(&cfg.DatabaseDsn, "d", "d", cfg.DatabaseDsn, "Database connection string")
+	flags.StringVarP(&cfg.RawStoreInterval, "s", "s", cfg.RawStoreInterval, "Store interval")
+	flags.StringVarP(&cfg.FileStoragePath, "f", "f", cfg.FileStoragePath, "Path to backup")
+	flags.BoolVarP(&cfg.Restore, "r", "r", cfg.Restore, "Restore from backup after restart")
+	flags.StringVarP(&cfg.SecretKey, "k", "k", cfg.SecretKey, "Secret key for hashing data")
+	flags.StringVar(&cfg.CryptoKey, "crypto-key", cfg.CryptoKey, "Path to private key for decrypt data")
 
 	return cmd
 }
 
-func getConfig(flags *pflag.FlagSet) (*server.Config, error) {
-	address, err := flags.GetString("a")
-	if err != nil {
-		return nil, err
+func parseConfig(cfg *server.Config, path string, flags *pflag.FlagSet) error {
+	if path != "" {
+		fd, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+
+		defer fd.Close()
+
+		if err := json.NewDecoder(fd).Decode(cfg); err != nil {
+			return err
+		}
 	}
 
-	storeInterval, err := flags.GetInt8("s")
-	if err != nil {
-		return nil, err
+	if err := flags.Parse(os.Args[1:]); err != nil {
+		return err
 	}
 
-	fileStoragePath, err := flags.GetString("f")
-	if err != nil {
-		return nil, err
+	if err := env.Parse(cfg); err != nil {
+		return err
 	}
 
-	restore, err := flags.GetBool("r")
-	if err != nil {
-		return nil, err
+	if err := cfg.FinishParse(); err != nil {
+		return err
 	}
 
-	databaseDsn, err := flags.GetString("d")
-	if err != nil {
-		return nil, err
-	}
-
-	secretKey, err := flags.GetString("k")
-	if err != nil {
-		return nil, err
-	}
-
-	cryptoKey, err := flags.GetString("crypto-key")
-	if err != nil {
-		return nil, err
-	}
-
-	config := server.Config{
-		Address:         address,
-		StoreInterval:   storeInterval,
-		FileStoragePath: fileStoragePath,
-		Restore:         restore,
-		DatabaseDsn:     databaseDsn,
-		SecretKey:       secretKey,
-		CryptoKey:       cryptoKey,
-	}
-
-	if err := env.Parse(&config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
+	return nil
 }

@@ -63,7 +63,7 @@ func (s *Agent) Start(ctx context.Context) {
 
 	metricCh := workers.FanIn(ctx, runtimeMetricCh, coreMetricCh)
 
-	go workers.AntiFraudConsumer(ctx, metricCh, s.r.Report, s.cfg.RateLimit)
+	go workers.AntiFraudConsumer(ctx, metricCh, s.r.Report, s.cfg.ReportInterval)
 
 	if err := http.ListenAndServe(":9000", nil); err != nil {
 		log.Fatal(err)

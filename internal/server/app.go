@@ -141,7 +141,7 @@ func (s *Server) BackupWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
-			time.Sleep(time.Duration(s.config.StoreInterval) * time.Second)
+			time.Sleep(s.config.StoreInterval)
 		}
 
 		if err := s.Backup(); err != nil {

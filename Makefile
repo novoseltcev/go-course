@@ -27,12 +27,12 @@ staticlint: build-staticlint $(STATICLINT_DIR)/staticlint
 
 .PHONY: agent
 agent: $(AGENT_DIR)/agent
-	$(AGENT_DIR)/agent -a http://0.0.0.0:8080 -p 2 -r 5 --crypto-key ./keys/public.pem
+	$(AGENT_DIR)/agent -c ./config/agent.json
 
 DATABASE_URI=postgresql://postgres:postgres@0.0.0.0:5432/praktikum?sslmode=disable
 .PHONY: server
 server: $(SERVER_DIR)/server
-	DATABASE_DSN=$(DATABASE_URI) RESTORE=true STORE_INTERVAL=2 FILE_STORAGE_PATH=$(SERVER_DIR)/backup.json $(SERVER_DIR)/server -a :8080 --crypto-key ./keys/private.pem
+	$(SERVER_DIR)/server -d $(DATABASE_URI) --config ./config/server.json
 
 migrate:
 	migrate -source file://migrations -database $(DATABASE_URI) up

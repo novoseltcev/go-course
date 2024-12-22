@@ -73,6 +73,8 @@ linters-settings:
   mnd:
     ignored-numbers:
       - '0o666'
+      - 1024
+
   varnamelen:
     check-return: true
     ignore-type-assert-ok: true

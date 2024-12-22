@@ -44,7 +44,7 @@ func TestMetric_Validate(t *testing.T) {
 		{
 			name:    "empty id",
 			metric:  &schemas.Metric{},
-			wantErr: errors.New("id is required"),
+			wantErr: schemas.ErrEmptyID,
 		},
 		{
 			name: "invalid type",
@@ -52,7 +52,7 @@ func TestMetric_Validate(t *testing.T) {
 				ID:    testutils.STRING,
 				MType: "unknown",
 			},
-			wantErr: errors.New("type is invalid"),
+			wantErr: schemas.ErrInvalidType,
 		},
 	}
 
@@ -60,7 +60,7 @@ func TestMetric_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.wantErr, tt.metric.Validate())
+			assert.Equal(t, tt.wantErr, errors.Unwrap(tt.metric.Validate()))
 		})
 	}
 }

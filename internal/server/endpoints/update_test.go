@@ -50,19 +50,19 @@ func TestUpdateMetric(t *testing.T) {
 			name: "unknown metric type",
 			url:  "/update/unknown/string/10",
 			code: http.StatusBadRequest,
-			body: "type is invalid\n",
+			body: "metric validator: type is invalid\n",
 		},
 		{
 			name: "invalid gauge value",
 			url:  "/update/gauge/string/value",
 			code: http.StatusBadRequest,
-			body: "invalid value\n",
+			body: "value is invalid\n",
 		},
 		{
 			name: "invalid counter value",
 			url:  "/update/counter/string/1.",
 			code: http.StatusBadRequest,
-			body: "invalid delta\n",
+			body: "delta is invalid\n",
 		},
 	}
 

@@ -83,7 +83,7 @@ func TestGetOneMetric(t *testing.T) {
 			name: "invalid metric type",
 			got:  got{id: testutils.STRING, Type: "unknown"},
 			code: http.StatusBadRequest,
-			body: "type is invalid\n",
+			body: "metric-id validator: type is invalid\n",
 		},
 		{
 			"failed serialization unknown",

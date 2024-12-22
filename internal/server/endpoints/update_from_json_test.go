@@ -44,7 +44,7 @@ func TestUpdateMetricFromJSON(t *testing.T) {
 			name: "invalid metric type",
 			got:  got{body: `{"id":"string","type":"unknown","value":10.123}`},
 			code: http.StatusBadRequest,
-			body: "type is invalid\n",
+			body: "metric validator: type is invalid\n",
 		},
 		{
 			name: "invalid gauge value",
@@ -69,7 +69,7 @@ func TestUpdateMetricFromJSON(t *testing.T) {
 			name: "invalid contract",
 			got:  got{body: `{}`},
 			code: http.StatusBadRequest,
-			body: "id is required\n",
+			body: "metric validator: id is empty\n",
 		},
 	}
 

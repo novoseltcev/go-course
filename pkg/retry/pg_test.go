@@ -71,7 +71,7 @@ func TestPgExec_pgConnError(t *testing.T) {
 		retries++
 
 		return &testErr
-	}, &retry.Options{Attempts: []time.Duration{time.Microsecond}})
+	}, &retry.Options{Retries: 3, Attempts: []time.Duration{time.Microsecond}})
 
 	require.Equal(t, 3, retries)
 	require.Error(t, err)
@@ -135,7 +135,7 @@ func TestPgSelect_pgConnError(t *testing.T) {
 		retries++
 
 		return 0, &testErr
-	}, &retry.Options{Attempts: []time.Duration{time.Microsecond}})
+	}, &retry.Options{Retries: 3, Attempts: []time.Duration{time.Microsecond}})
 
 	require.Equal(t, 3, retries)
 	require.Error(t, err)

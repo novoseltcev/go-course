@@ -23,7 +23,12 @@ func Webhook(t *testing.T) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(body)
+
+		if _, err := w.Write(body); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			return
+		}
 	})
 }
 

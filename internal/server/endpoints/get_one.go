@@ -61,22 +61,17 @@ func GetOneMetric(storager storages.MetricStorager) http.HandlerFunc {
 	}
 }
 
-// nolint: err113
 func serialize(metric *schemas.Metric) (string, error) {
+	if err := metric.Validate(); err != nil {
+		return "", err
+	}
+
 	switch metric.MType {
 	case schemas.Gauge:
-		if metric.Value == nil {
-			return "", errors.New("value is nil")
-		}
-
 		return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", *metric.Value), "0"), "."), nil
 	case schemas.Counter:
-		if metric.Delta == nil {
-			return "", errors.New("delta is nil")
-		}
-
 		return strconv.Itoa(int(*metric.Delta)), nil
 	default:
-		return "", errors.New("type is invalid")
+		return "", schemas.ErrInvalidType
 	}
 }

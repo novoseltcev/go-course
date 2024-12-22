@@ -33,7 +33,10 @@ func (s *Server) Start() error {
 	if s.config.DatabaseDsn == "" {
 		s.MetricStorage = storages.NewMemStorage()
 	} else {
-		storage := storages.NewPgStorage(s.config.DatabaseDsn)
+		storage, err := storages.NewPgStorage(s.config.DatabaseDsn)
+		if err != nil {
+			return err
+		}
 		defer storage.Close()
 
 		s.MetricStorage = storage

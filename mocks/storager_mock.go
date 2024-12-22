@@ -41,6 +41,20 @@ func (m *MockMetricStorager) EXPECT() *MockMetricStoragerMockRecorder {
 	return m.recorder
 }
 
+// Close mocks base method.
+func (m *MockMetricStorager) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockMetricStoragerMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockMetricStorager)(nil).Close))
+}
+
 // GetAll mocks base method.
 func (m *MockMetricStorager) GetAll(ctx context.Context) ([]schemas.Metric, error) {
 	m.ctrl.T.Helper()

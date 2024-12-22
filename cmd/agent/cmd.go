@@ -17,7 +17,7 @@ import (
 func Cmd() *cobra.Command {
 	var configFile string
 
-	cfg := &agent.Config{} //nolint:exhaustruct
+	cfg := &agent.Config{}
 	cmd := &cobra.Command{
 		Use:   "agent",
 		Short: "Use this command to run agent",
@@ -26,10 +26,9 @@ func Cmd() *cobra.Command {
 				log.Fatal(err)
 			}
 
-			a := agent.NewAgent(cfg)
-			ctx, cancel := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-			defer cancel()
-			a.Start(ctx)
+			sigCh := make(chan os.Signal, 1)
+			signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+			agent.Run(cfg, sigCh)
 		},
 	}
 

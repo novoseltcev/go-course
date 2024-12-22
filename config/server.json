@@ -1,6 +1,6 @@
 {
   "address": ":8080",
-  "restore": true,
+  "restore": false,
   "store_interval": "30s",
   "store_file": "/tmp/metrics-db.json",
   "database_dsn": "",

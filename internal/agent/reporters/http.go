@@ -71,7 +71,7 @@ func WithCheckSum(hr hasher) Option {
 
 // NewHTTPClient creates a new ReportClient.
 func NewHTTPClient(c *http.Client, baseURL string, opts ...Option) *ReportClient {
-	reportClient := &ReportClient{c: c, baseURL: baseURL} //nolint:exhaustruct
+	reportClient := &ReportClient{c: c, baseURL: baseURL}
 
 	for _, opt := range opts {
 		opt(reportClient)

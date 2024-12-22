@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/caarlos0/env/v10"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -15,19 +17,18 @@ import (
 func Cmd() *cobra.Command {
 	var configFile string
 
-	cfg := &server.Config{} //nolint:exhaustruct
+	cfg := &server.Config{}
 	cmd := &cobra.Command{
 		Use:   "server",
 		Short: "Use this command to run server",
 		Run: func(cmd *cobra.Command, _ []string) {
 			if err := parseConfig(cfg, configFile, cmd.Flags()); err != nil {
-				log.Fatal(err)
+				log.WithError(err).Fatal("failed to parse config")
 			}
 
-			s := server.NewServer(cfg)
-			if err := s.Start(); err != nil {
-				log.Fatal(err)
-			}
+			sigCh := make(chan os.Signal, 1)
+			signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+			server.Run(cfg, sigCh)
 		},
 	}
 

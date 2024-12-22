@@ -27,6 +27,7 @@ linters:
     - godox
     - gomnd
     - execinquery
+    - exhaustruct
     - wrapcheck
 
 linters-settings:
@@ -41,13 +42,6 @@ linters-settings:
         deny:
           - pkg: "github.com/pkg/errors"
             desc: Should be replaced by standard lib errors package
-  exhaustruct:
-    exclude:
-      - '.+/cobra\.Command$'
-      - '.+/schemas\.Metric$'
-      - '.+/retry\.Options$'
-      - '.+/*_test\.<anonymous>$'
-      - '.+/analysis\.Analyzer$'
   gci:
     sections:
       - standard
@@ -98,6 +92,7 @@ linters-settings:
       - r *http.Request
       - w http.ResponseWriter
       - r *chi.Mux
+      - r chi.Router
       # tests
       - t testing.T
       - b testing.B
@@ -111,7 +106,6 @@ issues:
       linters:
         - err113
         - errcheck
-        - exhaustruct
         - dupl
         - funlen
         - gochecknoglobals

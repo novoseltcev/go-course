@@ -10,10 +10,10 @@ type Options struct {
 
 // TotalAttempts returns the total number of attempts.
 //
-// Default is 3.
+// Default is 1.
 func (opt *Options) TotalAttempts() uint {
 	if opt.Retries == 0 {
-		return 3 //nolint:mnd
+		return 1
 	}
 
 	return opt.Retries

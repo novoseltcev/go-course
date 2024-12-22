@@ -73,3 +73,7 @@ func (s *MemStorage) SaveBatch(ctx context.Context, metrics []schemas.Metric) er
 func (s *MemStorage) Ping(_ context.Context) error {
 	return nil
 }
+
+func (s *MemStorage) Close() error {
+	return nil
+}

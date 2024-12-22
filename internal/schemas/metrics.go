@@ -1,7 +1,10 @@
 // Package schemas contains seralizable and deserializable data structures.
 package schemas
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 const (
 	Gauge   = "gauge"
@@ -16,33 +19,39 @@ type Metric struct {
 	MType string   `db:"type"  json:"type"`            // parameter, specifying gauge or counter
 }
 
-//nolint: err113
+var (
+	ErrEmptyID      = errors.New("id is empty")
+	ErrInvalidType  = errors.New("type is invalid")
+	ErrInvalidValue = errors.New("value is invalid")
+	ErrInvalidDelta = errors.New("delta is invalid")
+)
+
 func (m *Metric) Validate() error {
 	if m.ID == "" {
-		return errors.New("id is required")
+		return fmt.Errorf("metric validator: %w", ErrEmptyID)
 	}
 
 	if m.MType != Gauge && m.MType != Counter {
-		return errors.New("type is invalid")
+		return fmt.Errorf("metric validator: %w", ErrInvalidType)
 	}
 
 	if m.MType == Gauge {
 		if m.Value == nil {
-			return errors.New("gauge metric has nil value")
+			return fmt.Errorf("metric validator: %w; want non-nil", ErrInvalidValue)
 		}
 
 		if m.Delta != nil {
-			return errors.New("gauge metric has non-nil delta")
+			return fmt.Errorf("metric validator: %w; want nil", ErrInvalidDelta)
 		}
 	}
 
 	if m.MType == Counter {
 		if m.Delta == nil {
-			return errors.New("counter metric has nil delta")
+			return fmt.Errorf("metric validator: %w; want non-nil", ErrInvalidDelta)
 		}
 
 		if m.Value != nil {
-			return errors.New("counter metric has non-nil value")
+			return fmt.Errorf("metric validator: %w; want nil", ErrInvalidValue)
 		}
 	}
 
@@ -58,14 +67,13 @@ type MetricIdentifier struct {
 	MType string `db:"type" json:"type"` // parameter, specifying gauge or counter
 }
 
-//nolint: err113
 func (m *MetricIdentifier) Validate() error {
 	if m.ID == "" {
-		return errors.New("id is empty")
+		return fmt.Errorf("metric-id validator: %w", ErrEmptyID)
 	}
 
 	if m.MType != Gauge && m.MType != Counter {
-		return errors.New("type is invalid")
+		return fmt.Errorf("metric-id validator: %w", ErrInvalidType)
 	}
 
 	return nil

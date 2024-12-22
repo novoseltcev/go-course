@@ -2,40 +2,61 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	_ "net/http/pprof" //nolint:gosec
+	"os"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/agent/collectors"
-	"github.com/novoseltcev/go-course/internal/agent/reporters"
+	"github.com/novoseltcev/go-course/pkg/httpserver"
 	"github.com/novoseltcev/go-course/pkg/workers"
 )
 
-type Agent struct {
-	config *Config
-	client *http.Client
-}
+func Run(cfg *Config, sigCh <-chan os.Signal) {
+	logrus.SetLevel(logrus.InfoLevel) // TODO: set log level from config
+	log := logrus.New().WithField("source", "agent")
+	ctx, cancel := context.WithCancel(context.Background())
 
-func NewAgent(config *Config) *Agent {
-	return &Agent{
-		config: config,
-		client: http.DefaultClient,
+	container, err := NewAppContainer(cfg)
+	if err != nil {
+		log.WithError(err).Fatal("failed to init app container")
 	}
-}
+	defer container.Close()
 
-func (s *Agent) Start(ctx context.Context) {
-	runtimeMetricCh := workers.Producer(ctx, collectors.CollectRuntimeMetrics, s.config.PollInterval)
-	coreMetricCh := workers.Producer(ctx, collectors.CollectCoreMetrics, s.config.PollInterval)
+	log.Info("Agent starting")
+
+	runtimeMetricCh := workers.Producer(ctx, collectors.CollectRuntimeMetrics, cfg.PollInterval)
+	coreMetricCh := workers.Producer(ctx, collectors.CollectCoreMetrics, cfg.PollInterval)
 
 	metricCh := workers.FanIn(ctx, runtimeMetricCh, coreMetricCh)
 
-	reporter := reporters.NewAPIReporter(s.client, "http://"+s.config.Address, s.config.SecretKey)
-	go workers.AntiFraudConsumer(ctx, metricCh, reporter.Report, s.config.RateLimit)
+	go workers.AntiFraudConsumer(ctx, metricCh, container.Reporter.Report, cfg.ReportInterval)
 
-	if err := http.ListenAndServe(":9000", nil); err != nil {
-		log.Fatal(err)
-	}
+	srv := httpserver.New(nil, httpserver.WithAddr(":9000"))
+
+	log.Info("Agent started")
+
+	go func() {
+		defer cancel()
+
+		select {
+		case sig := <-sigCh:
+			log.WithField("signal", sig).Info("Signal received")
+		case err := <-srv.Notify():
+			if !errors.Is(err, http.ErrServerClosed) {
+				log.WithError(err).Error("Failed to listen and serve")
+			}
+		}
+
+		log.Info("Shutting down")
+
+		if err := srv.Shutdown(); err != nil {
+			log.WithError(err).Error("Failed to shutdown")
+		}
+	}()
 
 	<-ctx.Done()
+	log.Info("Agent stopped")
 }

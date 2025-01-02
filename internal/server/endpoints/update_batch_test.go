@@ -81,7 +81,7 @@ func TestUpdateBatch(t *testing.T) {
 				storager.EXPECT().SaveBatch(gomock.Any(), tt.got.batch).Return(tt.err)
 			}
 
-			apitest.New().
+			apitest.New(tt.name).
 				Handler(endpoints.NewAPIRouter(storager)).
 				Post("/updates/").
 				Body(tt.got.body).

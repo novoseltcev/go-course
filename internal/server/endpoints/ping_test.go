@@ -32,11 +32,12 @@ func TestPing(t *testing.T) {
 			storager := mocks.NewMockMetricStorager(ctrl)
 			storager.EXPECT().Ping(gomock.Any()).Return(tt.err)
 
-			apitest.New().
+			apitest.New(tt.name).
 				Handler(endpoints.NewAPIRouter(storager)).
 				Get("/ping").
 				Expect(t).
-				Status(tt.code)
+				Status(tt.code).
+				End()
 		})
 	}
 }

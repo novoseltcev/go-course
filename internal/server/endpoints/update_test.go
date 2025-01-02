@@ -75,7 +75,7 @@ func TestUpdateMetric(t *testing.T) {
 				storager.EXPECT().Save(gomock.Any(), tt.metric).Return(tt.err)
 			}
 
-			apitest.New().
+			apitest.New(tt.name).
 				Handler(endpoints.NewAPIRouter(storager)).
 				Post(tt.url).
 				Expect(t).

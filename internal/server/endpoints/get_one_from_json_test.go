@@ -81,7 +81,7 @@ func TestGetOneMetricFromJSON(t *testing.T) {
 				storager.EXPECT().GetOne(gomock.Any(), tt.got.id, tt.got.Type).Return(tt.want.metric, tt.want.err)
 			}
 
-			apitest.New().
+			apitest.New(tt.name).
 				Handler(endpoints.NewAPIRouter(storager)).
 				Post("/value/").
 				Bodyf(`{"type":"%s","id":"%s"}`, tt.got.Type, tt.got.id).
@@ -101,8 +101,7 @@ func TestGetOneMetricFromJSON__contract_error(t *testing.T) {
 	storager := mocks.NewMockMetricStorager(ctrl)
 	storager.EXPECT().GetOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
-	apitest.New().
-		Handler(endpoints.NewAPIRouter(storager)).
+	apitest.Handler(endpoints.NewAPIRouter(storager)).
 		Post("/value/").
 		Body(`{"type}`).
 		Expect(t).

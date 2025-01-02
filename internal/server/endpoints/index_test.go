@@ -92,7 +92,7 @@ func TestIndex(t *testing.T) {
 			storager := mocks.NewMockMetricStorager(ctrl)
 			storager.EXPECT().GetAll(gomock.Any()).Return(tt.want.metrics, tt.want.err)
 
-			apitest.New().
+			apitest.New(tt.name).
 				Handler(endpoints.NewAPIRouter(storager)).
 				Get("/").
 				Expect(t).

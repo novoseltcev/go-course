@@ -82,7 +82,7 @@ func TestUpdateMetricFromJSON(t *testing.T) {
 				storager.EXPECT().Save(gomock.Any(), tt.got.metric).Return(tt.err)
 			}
 
-			apitest.New().
+			apitest.New(tt.name).
 				Handler(endpoints.NewAPIRouter(storager)).
 				Post("/update/").
 				Body(tt.got.body).

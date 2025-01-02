@@ -117,7 +117,7 @@ func TestGetOneMetric(t *testing.T) {
 				storager.EXPECT().GetOne(gomock.Any(), tt.got.id, tt.got.Type).Return(tt.want.metric, tt.want.err)
 			}
 
-			apitest.New().
+			apitest.New(tt.name).
 				Handler(endpoints.NewAPIRouter(storager)).
 				Getf("/value/%s/%s", tt.got.Type, tt.got.id).
 				Expect(t).

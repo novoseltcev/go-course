@@ -14,13 +14,15 @@ type PgStorage struct {
 	DB *sqlx.DB
 }
 
-func NewPgStorage(url string) *PgStorage {
+var ErrPgx = errors.New("failed to open database")
+
+func NewPgStorage(url string) (*PgStorage, error) {
 	db, err := sqlx.Open("pgx", url)
 	if err != nil {
-		panic(errors.Join(err, errors.New("failed to open database"))) //nolint: err113
+		return nil, errors.Join(err, ErrPgx)
 	}
 
-	return &PgStorage{DB: db}
+	return &PgStorage{DB: db}, nil
 }
 
 func (s *PgStorage) GetOne(ctx context.Context, id, mType string) (*schemas.Metric, error) {

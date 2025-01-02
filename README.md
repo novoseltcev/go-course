@@ -38,5 +38,5 @@ make docs
 
 ## Run linter
 ```bash
-make format lint
+make fix lint
 ```

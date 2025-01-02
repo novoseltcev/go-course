@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/novoseltcev/go-course/pkg/retry"
+	"github.com/novoseltcev/go-course/pkg/testutils"
 )
 
 func ExamplePgExec() {
@@ -38,7 +39,7 @@ func ExamplePgExec_error() {
 	err := retry.PgExec(context.Background(), func() error {
 		retries++
 
-		return errTest
+		return testutils.Err
 	}, &retry.Options{
 		Attempts: []time.Duration{time.Microsecond},
 		Retries:  3,
@@ -70,7 +71,7 @@ func TestPgExec_pgConnError(t *testing.T) {
 		retries++
 
 		return &testErr
-	}, &retry.Options{Attempts: []time.Duration{time.Microsecond}})
+	}, &retry.Options{Retries: 3, Attempts: []time.Duration{time.Microsecond}})
 
 	require.Equal(t, 3, retries)
 	require.Error(t, err)
@@ -83,7 +84,7 @@ func ExamplePgSelect() {
 	val, err := retry.PgSelect(context.Background(), func() (int, error) {
 		retries++
 
-		return testValue, nil
+		return testutils.INT, nil
 	}, &retry.Options{
 		Attempts: []time.Duration{time.Microsecond},
 		Retries:  3,
@@ -92,7 +93,7 @@ func ExamplePgSelect() {
 	fmt.Printf("%d retries were made and return value=%d and error=%T", retries, val, err)
 
 	// Output:
-	// 1 retries were made and return value=12 and error=<nil>
+	// 1 retries were made and return value=10 and error=<nil>
 }
 
 func ExamplePgSelect_error() {
@@ -101,7 +102,7 @@ func ExamplePgSelect_error() {
 	val, err := retry.PgSelect(context.Background(), func() (int, error) {
 		retries++
 
-		return 0, errTest
+		return 0, testutils.Err
 	}, &retry.Options{
 		Attempts: []time.Duration{time.Microsecond},
 		Retries:  3,
@@ -117,11 +118,11 @@ func TestPgSelect_withoutOptions(t *testing.T) {
 	t.Parallel()
 
 	data, err := retry.PgSelect(context.Background(), func() (int, error) {
-		return testValue, nil
+		return testutils.INT, nil
 	}, nil)
 
 	require.NoError(t, err)
-	assert.Equal(t, testValue, data)
+	assert.Equal(t, testutils.INT, data)
 }
 
 func TestPgSelect_pgConnError(t *testing.T) {
@@ -134,7 +135,7 @@ func TestPgSelect_pgConnError(t *testing.T) {
 		retries++
 
 		return 0, &testErr
-	}, &retry.Options{Attempts: []time.Duration{time.Microsecond}})
+	}, &retry.Options{Retries: 3, Attempts: []time.Duration{time.Microsecond}})
 
 	require.Equal(t, 3, retries)
 	require.Error(t, err)

@@ -20,12 +20,12 @@ func TestOptions_TotalAttempts(t *testing.T) {
 		{
 			name: "default",
 			got:  0,
-			want: 3,
+			want: 1,
 		},
 		{
 			name: "custom",
-			got:  1,
-			want: 1,
+			got:  2,
+			want: 2,
 		},
 	}
 	for _, tt := range tests {

@@ -1,4 +1,4 @@
-main: generate fix lint build up migrate server
+main: generate fix lint test cover build up migrate server
 
 generate:
 	go generate ./...

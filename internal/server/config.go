@@ -1,7 +1,15 @@
-//nolint: tagliatelle
+// nolint: tagliatelle
 package server
 
-import "time"
+import (
+	"encoding/json"
+	"os"
+	"time"
+
+	"github.com/caarlos0/env/v10"
+	"github.com/spf13/afero"
+	"github.com/spf13/pflag"
+)
 
 type Config struct {
 	Address          string        `env:"ADDRESS"           json:"address"`
@@ -14,9 +22,39 @@ type Config struct {
 	StoreInterval    time.Duration `json:"-"`
 }
 
-func (c *Config) FinishParse() error {
+func (c *Config) Load(fs afero.Fs, path string, flags *pflag.FlagSet) error {
+	if path != "" {
+		fd, err := fs.Open(path)
+		if err != nil {
+			return err
+		}
+		defer fd.Close()
+
+		if err := json.NewDecoder(fd).Decode(c); err != nil {
+			return err
+		}
+	}
+
+	if err := flags.Parse(os.Args[1:]); err != nil {
+		return err
+	}
+
+	if err := env.Parse(c); err != nil {
+		return err
+	}
+
+	if err := c.parseRawFields(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Config) parseRawFields() error {
 	var err error
-	c.StoreInterval, err = time.ParseDuration(c.RawStoreInterval)
+	if c.RawStoreInterval != "" {
+		c.StoreInterval, err = time.ParseDuration(c.RawStoreInterval)
+	}
 
 	return err
 }

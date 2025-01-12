@@ -41,20 +41,6 @@ func (m *MockMetricStorager) EXPECT() *MockMetricStoragerMockRecorder {
 	return m.recorder
 }
 
-// Close mocks base method.
-func (m *MockMetricStorager) Close() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Close indicates an expected call of Close.
-func (mr *MockMetricStoragerMockRecorder) Close() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockMetricStorager)(nil).Close))
-}
-
 // GetAll mocks base method.
 func (m *MockMetricStorager) GetAll(ctx context.Context) ([]schemas.Metric, error) {
 	m.ctrl.T.Helper()
@@ -83,20 +69,6 @@ func (m *MockMetricStorager) GetOne(ctx context.Context, id, mType string) (*sch
 func (mr *MockMetricStoragerMockRecorder) GetOne(ctx, id, mType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOne", reflect.TypeOf((*MockMetricStorager)(nil).GetOne), ctx, id, mType)
-}
-
-// Ping mocks base method.
-func (m *MockMetricStorager) Ping(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ping", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Ping indicates an expected call of Ping.
-func (mr *MockMetricStoragerMockRecorder) Ping(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockMetricStorager)(nil).Ping), ctx)
 }
 
 // Save mocks base method.

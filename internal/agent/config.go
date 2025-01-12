@@ -1,7 +1,15 @@
-//nolint: tagliatelle
+// nolint: tagliatelle
 package agent
 
-import "time"
+import (
+	"encoding/json"
+	"os"
+	"time"
+
+	"github.com/caarlos0/env/v10"
+	"github.com/spf13/afero"
+	"github.com/spf13/pflag"
+)
 
 type Config struct {
 	Address           string        `env:"ADDRESS"         json:"address"`
@@ -13,19 +21,49 @@ type Config struct {
 	ReportInterval    time.Duration `json:"-"`
 }
 
-func (c *Config) FinishParse() error {
-	pollInterval, err := time.ParseDuration(c.RawPollInterval)
-	if err != nil {
+func (c *Config) Load(fs afero.Fs, path string, flags *pflag.FlagSet) error {
+	if path != "" {
+		fd, err := fs.Open(path)
+		if err != nil {
+			return err
+		}
+		defer fd.Close()
+
+		if err := json.NewDecoder(fd).Decode(c); err != nil {
+			return err
+		}
+	}
+
+	if err := flags.Parse(os.Args[1:]); err != nil {
 		return err
 	}
 
-	reportInterval, err := time.ParseDuration(c.RawReportInterval)
-	if err != nil {
+	if err := env.Parse(c); err != nil {
 		return err
 	}
 
-	c.PollInterval = pollInterval
-	c.ReportInterval = reportInterval
+	if err := c.parseRawFields(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Config) parseRawFields() error {
+	var err error
+	if c.RawPollInterval != "" {
+		c.PollInterval, err = time.ParseDuration(c.RawPollInterval)
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.RawReportInterval != "" {
+		c.ReportInterval, err = time.ParseDuration(c.RawReportInterval)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

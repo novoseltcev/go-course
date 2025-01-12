@@ -9,7 +9,6 @@ import (
 func NewAPIRouter(storage storages.MetricStorager) *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Get(`/ping`, Ping(storage))
 	r.Get(`/`, Index(storage))
 	r.Post(`/update/{type}/{id}/{value}`, UpdateMetric(storage))
 	r.Get(`/value/{type}/{id}`, GetOneMetric(storage))

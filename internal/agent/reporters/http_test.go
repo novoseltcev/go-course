@@ -1,4 +1,4 @@
-//nolint: paralleltest
+// nolint: paralleltest
 package reporters_test
 
 import (
@@ -69,6 +69,10 @@ func TestReportSuccessBase(t *testing.T) {
 	}
 }
 
+var testMetrics = []schemas.Metric{{ID: testutils.STRING, MType: schemas.Counter}}
+
+const testMetricsJSON = `[{"id":"string","type":"counter"}]`
+
 func TestReportSuccessWithCheckSum(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -77,10 +81,10 @@ func TestReportSuccessWithCheckSum(t *testing.T) {
 	hasher := NewMockhasher(ctrl)
 	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithCheckSum(hasher))
 
-	hasher.EXPECT().GetHash([]byte(`[]`)).Return([]byte{1, 2, 3}, nil)
+	hasher.EXPECT().GetHash([]byte(testMetricsJSON)).Return([]byte{1, 2, 3}, nil)
 	gock.New(testutils.URL).Post("/").MatchHeader("Hashsha256", hex.Dump([]byte{1, 2, 3}))
 
-	assert.NoError(t, reporter.Report(context.TODO(), []schemas.Metric{}))
+	assert.NoError(t, reporter.Report(context.TODO(), testMetrics))
 }
 
 func TestReportSuccessWithOptions(t *testing.T) {
@@ -99,7 +103,7 @@ func TestReportSuccessWithOptions(t *testing.T) {
 		reporters.WithCompression(compressor),
 	)
 
-	encryptor.EXPECT().Encrypt([]byte(`[]`)).Return([]byte{1, 2, 3}, nil)
+	encryptor.EXPECT().Encrypt([]byte(testMetricsJSON)).Return([]byte{1, 2, 3}, nil)
 	compressor.EXPECT().Compress([]byte{1, 2, 3}).Return([]byte{4, 5}, nil)
 	hasher.EXPECT().GetHash([]byte{4, 5}).Return([]byte{6}, nil)
 	gock.New(testutils.URL).
@@ -108,20 +112,20 @@ func TestReportSuccessWithOptions(t *testing.T) {
 		MatchHeader("Hashsha256", hex.Dump([]byte{6})).
 		JSON([]byte{4, 5})
 
-	assert.NoError(t, reporter.Report(context.TODO(), []schemas.Metric{}))
+	assert.NoError(t, reporter.Report(context.TODO(), testMetrics))
 }
 
 func TestReportSuccessWithRetry(t *testing.T) {
 	defer gock.Off()
 
-	gock.New(testutils.URL).Post("/").JSON([]byte(`[]`)).Times(2)
+	gock.New(testutils.URL).Post("/").JSON([]byte(testMetricsJSON)).Times(2)
 
 	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithRetry(retry.Options{
 		Attempts: []time.Duration{time.Millisecond},
 		Retries:  2,
 	}))
 
-	assert.NoError(t, reporter.Report(context.TODO(), []schemas.Metric{}))
+	assert.NoError(t, reporter.Report(context.TODO(), testMetrics))
 }
 
 func TestReportFailedRetries(t *testing.T) {
@@ -135,7 +139,7 @@ func TestReportFailedRetries(t *testing.T) {
 	gock.New(testutils.URL).Post("/").Times(2).ReplyError(testutils.Err)
 
 	assert.ErrorContains(t,
-		reporter.Report(context.TODO(), []schemas.Metric{}),
+		reporter.Report(context.TODO(), testMetrics),
 		"error during send request: All attempts fail:",
 	)
 }
@@ -148,10 +152,10 @@ func TestReportFailedEncription(t *testing.T) {
 	enc := NewMockencryptor(ctrl)
 	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithEncryption(enc))
 
-	enc.EXPECT().Encrypt([]byte(`[]`)).Return(nil, testutils.Err)
+	enc.EXPECT().Encrypt([]byte(testMetricsJSON)).Return(nil, testutils.Err)
 
 	assert.EqualError(t,
-		reporter.Report(context.TODO(), []schemas.Metric{}),
+		reporter.Report(context.TODO(), testMetrics),
 		"cannot encrypt metrics: "+testutils.Err.Error(),
 	)
 }
@@ -164,10 +168,10 @@ func TestReportFailedCompression(t *testing.T) {
 	compressor := NewMockcompressor(ctrl)
 	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithCompression(compressor))
 
-	compressor.EXPECT().Compress([]byte(`[]`)).Return(nil, testutils.Err)
+	compressor.EXPECT().Compress([]byte(testMetricsJSON)).Return(nil, testutils.Err)
 
 	assert.EqualError(t,
-		reporter.Report(context.TODO(), []schemas.Metric{}),
+		reporter.Report(context.TODO(), testMetrics),
 		"cannot compress metrics: "+testutils.Err.Error(),
 	)
 }
@@ -180,7 +184,7 @@ func TestReportFailedCheckSum(t *testing.T) {
 	hasher := NewMockhasher(ctrl)
 	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.STRING, reporters.WithCheckSum(hasher))
 
-	hasher.EXPECT().GetHash([]byte(`[]`)).Return(nil, testutils.Err)
+	hasher.EXPECT().GetHash([]byte(testMetricsJSON)).Return(nil, testutils.Err)
 
-	assert.EqualError(t, reporter.Report(context.TODO(), []schemas.Metric{}), "cannot get hash: "+testutils.Err.Error())
+	assert.EqualError(t, reporter.Report(context.TODO(), testMetrics), "cannot get hash: "+testutils.Err.Error())
 }

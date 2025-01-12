@@ -43,7 +43,7 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 func Gzip(next http.Handler) http.Handler {
 	wrapper := func(w http.ResponseWriter, r *http.Request) {
 		contentEncoding := r.Header.Get("Content-Encoding")
-		if isCompressed := strings.Contains(contentEncoding, "gzip"); isCompressed {
+		if isCompressed := strings.Contains(contentEncoding, "gzip"); isCompressed && r.Body != nil {
 			decompressor, err := gzip.NewReader(r.Body)
 			if err != nil {
 				log.WithError(err).Error("cannot decompress body")

@@ -22,31 +22,33 @@ var ErrInvalidCheckSum = errors.New("invalid check sum")
 func CheckSum(key string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		wrapper := func(w http.ResponseWriter, r *http.Request) {
-			requestCheckSum, err := hex.DecodeString(r.Header.Get("Hashsha256"))
-			if err != nil {
-				log.WithError(err).Errorf("Hashsha256 not decodable to string")
-				http.Error(w, err.Error(), http.StatusBadRequest)
+			if r.Body != nil {
+				requestCheckSum, err := hex.DecodeString(r.Header.Get("Hashsha256"))
+				if err != nil {
+					log.WithError(err).Errorf("Hashsha256 not decodable to string")
+					http.Error(w, err.Error(), http.StatusBadRequest)
 
-				return
-			}
+					return
+				}
 
-			body, err := copyBody(r)
-			if err != nil {
-				log.WithError(err).Error("cannot read body")
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				body, err := copyBody(r)
+				if err != nil {
+					log.WithError(err).Error("cannot read body")
+					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 
-				return
-			}
+					return
+				}
 
-			h := hmac.New(sha256.New, []byte(key))
-			h.Write(body)
-			computedCheckSum := h.Sum(nil)
+				h := hmac.New(sha256.New, []byte(key))
+				h.Write(body)
+				computedCheckSum := h.Sum(nil)
 
-			if !hmac.Equal(requestCheckSum, computedCheckSum) {
-				log.WithField("got", requestCheckSum).WithField("want", computedCheckSum).Error(ErrInvalidCheckSum.Error())
-				http.Error(w, ErrInvalidCheckSum.Error(), http.StatusBadRequest)
+				if !hmac.Equal(requestCheckSum, computedCheckSum) {
+					log.WithField("got", requestCheckSum).WithField("want", computedCheckSum).Error(ErrInvalidCheckSum.Error())
+					http.Error(w, ErrInvalidCheckSum.Error(), http.StatusBadRequest)
 
-				return
+					return
+				}
 			}
 
 			next.ServeHTTP(w, r)

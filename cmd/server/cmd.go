@@ -1,38 +1,92 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"github.com/caarlos0/env/v10"
-	log "github.com/sirupsen/logrus"
+	"github.com/jmoiron/sqlx"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"github.com/novoseltcev/go-course/internal/server"
+	"github.com/novoseltcev/go-course/internal/storages"
+	"github.com/novoseltcev/go-course/pkg/chunkedrsa"
 )
 
-func Cmd() *cobra.Command {
-	var configFile string
+// nolint: gochecknoglobals
+var configFile string
 
-	cfg := &server.Config{}
+// nolint: funlen
+func Cmd() *cobra.Command {
+	cfg := &server.Config{
+		Address:         ":8080",
+		Restore:         false,
+		StoreInterval:   time.Second * 30, // nolint:mnd
+		FileStoragePath: "/tmp/metrics-db.json",
+	}
+
 	cmd := &cobra.Command{
 		Use:   "server",
-		Short: "Use this command to run server",
+		Short: "Metric server",
 		Run: func(cmd *cobra.Command, _ []string) {
-			if err := parseConfig(cfg, configFile, cmd.Flags()); err != nil {
-				log.WithError(err).Fatal("failed to parse config")
+			logger := logrus.New()
+			fs := afero.NewOsFs()
+
+			if err := cfg.Load(fs, configFile, cmd.Flags()); err != nil {
+				logger.WithError(err).Fatal("failed to parse config")
 			}
+
+			logger.SetLevel(logrus.DebugLevel) // TODO: set log level from config
+
+			var err error
+			var db *sqlx.DB
+			var storage storages.MetricStorager
+			var decryptor chunkedrsa.Decryptor
+
+			if cfg.DatabaseDsn == "" {
+				storage = storages.NewMemStorage()
+			} else {
+				db, err = sqlx.Open("pgx", cfg.DatabaseDsn)
+				if err != nil {
+					logger.WithError(err).Panic("failed to open connection to database")
+				}
+				defer db.Close()
+
+				storage = storages.NewPgStorage(db)
+			}
+
+			if cfg.CryptoKey != "" {
+				km, err := chunkedrsa.NewKeyManagerFromFile(fs, cfg.CryptoKey)
+				if err != nil {
+					logger.WithError(err).Panic("failed to load crypto key")
+				}
+
+				decryptor, err = chunkedrsa.NewDecryptor(km.MustPrivateKey(), chunkedrsa.PKCS1v15Algorithm)
+				if err != nil {
+					logger.WithError(err).Panic("failed to initialize decryptor")
+				}
+			}
+
+			app := server.NewApp(cfg, logger, db, storage, decryptor)
 
 			sigCh := make(chan os.Signal, 1)
 			signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-			server.Run(cfg, sigCh)
+			defer signal.Stop(sigCh)
+
+			app.Run(sigCh)
 		},
 	}
+	initFlags(cfg, cmd.Flags())
 
-	flags := cmd.Flags()
+	return cmd
+}
+
+// initFlags initializes flags for parsing and help command.
+func initFlags(cfg *server.Config, flags *pflag.FlagSet) {
 	flags.StringVarP(&configFile, "config", "c", "", "Path to config file")
 	flags.StringVarP(&cfg.Address, "a", "a", cfg.Address, "Server address")
 	flags.StringVarP(&cfg.DatabaseDsn, "d", "d", cfg.DatabaseDsn, "Database connection string")
@@ -41,35 +95,4 @@ func Cmd() *cobra.Command {
 	flags.BoolVarP(&cfg.Restore, "r", "r", cfg.Restore, "Restore from backup after restart")
 	flags.StringVarP(&cfg.SecretKey, "k", "k", cfg.SecretKey, "Secret key for hashing data")
 	flags.StringVar(&cfg.CryptoKey, "crypto-key", cfg.CryptoKey, "Path to private key for decrypt data")
-
-	return cmd
-}
-
-func parseConfig(cfg *server.Config, path string, flags *pflag.FlagSet) error {
-	if path != "" {
-		fd, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-
-		defer fd.Close()
-
-		if err := json.NewDecoder(fd).Decode(cfg); err != nil {
-			return err
-		}
-	}
-
-	if err := flags.Parse(os.Args[1:]); err != nil {
-		return err
-	}
-
-	if err := env.Parse(cfg); err != nil {
-		return err
-	}
-
-	if err := cfg.FinishParse(); err != nil {
-		return err
-	}
-
-	return nil
 }

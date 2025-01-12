@@ -81,6 +81,10 @@ func NewHTTPClient(c *http.Client, baseURL string, opts ...Option) *ReportClient
 }
 
 func (rc *ReportClient) Report(ctx context.Context, metrics []schemas.Metric) error {
+	if len(metrics) == 0 {
+		return nil
+	}
+
 	b, err := rc.prepareData(metrics)
 	if err != nil {
 		return err
@@ -90,6 +94,10 @@ func (rc *ReportClient) Report(ctx context.Context, metrics []schemas.Metric) er
 }
 
 func (rc *ReportClient) prepareData(metrics []schemas.Metric) ([]byte, error) {
+	if len(metrics) == 0 {
+		return nil, nil
+	}
+
 	b, err := json.Marshal(metrics)
 	if err != nil {
 		return nil, fmt.Errorf("cannot marshal metrics: %w", err)
@@ -113,6 +121,10 @@ func (rc *ReportClient) prepareData(metrics []schemas.Metric) ([]byte, error) {
 }
 
 func (rc *ReportClient) send(ctx context.Context, url string, body []byte) error {
+	if len(body) == 0 {
+		return nil
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("cannot create request: %w", err)

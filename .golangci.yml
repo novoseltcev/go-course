@@ -29,6 +29,7 @@ linters:
     - execinquery
     - exhaustruct
     - wrapcheck
+    - nolintlint  # Conflicts with gofmt
 
 linters-settings:
   errcheck:
@@ -59,7 +60,7 @@ linters-settings:
       - empty
       - stdlib
       - generic
-      - github.com/novoseltcev/go-course/internal/storages.MetricStorager
+      - (or|er)$
   lll:
     line-length: 120
   misspell:
@@ -85,9 +86,15 @@ linters-settings:
       - p []byte
       - i int
       - n int
-      - wg sync.WaitGroup
-      - tx *sql.Tx
       - fd *os.File
+      - fd afero.File
+      - fs afero.Fs
+      # sync
+      - wg sync.WaitGroup
+      - g *errgroup.Group
+      # db
+      - db *sqlx.DB
+      - tx *sql.Tx
       # http
       - r *http.Request
       - w http.ResponseWriter
@@ -99,6 +106,7 @@ linters-settings:
       - ts *httptest.Server
       # custom
       - c Client
+      - km *chunkedrsa.KeyManager
   
 issues:
   exclude-rules:

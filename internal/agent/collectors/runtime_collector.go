@@ -45,14 +45,14 @@ func CollectRuntimeMetrics(_ context.Context) ([]schemas.Metric, error) {
 		{"TotalAlloc", rtm.TotalAlloc},
 	}
 
-	result := make([]schemas.Metric, 0, len(metrics)+2) //nolint:mnd
+	result := make([]schemas.Metric, 0, len(metrics)+2) // nolint:mnd
 
 	for _, m := range metrics {
 		val := float64(m.uint64)
 		result = append(result, schemas.Metric{ID: m.string, MType: schemas.Gauge, Value: &val})
 	}
 
-	randValue := rand.Float64() //nolint:gosec
+	randValue := rand.Float64() // nolint:gosec
 	result = append(result, schemas.Metric{ID: "RandomValue", MType: schemas.Gauge, Value: &randValue})
 
 	var counterStep int64 = 10

@@ -33,3 +33,6 @@ cmd/server/main
 cmd/server/server
 cmd/server/*.json
 cmd/staticlint/staticlint
+
+# Secrets
+*.pem

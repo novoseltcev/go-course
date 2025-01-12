@@ -16,23 +16,26 @@ type decryptor interface {
 func Decrypt(dec decryptor) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			b, err := io.ReadAll(r.Body)
-			if err != nil {
-				log.WithError(err).Error("failed to read body")
-				http.Error(w, "failed to read body", http.StatusInternalServerError)
+			if r.Body != nil {
+				b, err := io.ReadAll(r.Body)
+				if err != nil {
+					log.WithError(err).Error("failed to read body")
+					http.Error(w, "failed to read body", http.StatusInternalServerError)
 
-				return
+					return
+				}
+
+				decrypted, err := dec.Decrypt(b)
+				if err != nil {
+					log.WithError(err).Error("failed to decrypt")
+					http.Error(w, "failed to decrypt", http.StatusInternalServerError)
+
+					return
+				}
+
+				r.Body = io.NopCloser(bytes.NewBuffer(decrypted))
 			}
 
-			decrypted, err := dec.Decrypt(b)
-			if err != nil {
-				log.WithError(err).Error("failed to decrypt")
-				http.Error(w, "failed to decrypt", http.StatusInternalServerError)
-
-				return
-			}
-
-			r.Body = io.NopCloser(bytes.NewBuffer(decrypted))
 			next.ServeHTTP(w, r)
 		})
 	}

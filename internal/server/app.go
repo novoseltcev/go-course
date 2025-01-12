@@ -1,84 +1,87 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/internal/storages"
+	"github.com/novoseltcev/go-course/pkg/chunkedrsa"
 	"github.com/novoseltcev/go-course/pkg/httpserver"
 	"github.com/novoseltcev/go-course/pkg/middlewares"
 )
 
-func Run(cfg *Config, sigCh <-chan os.Signal) { //nolint:cyclop
-	logrus.SetLevel(logrus.InfoLevel) // TODO: set log level from config
-	log := logrus.New().WithField("source", "server")
-	doneCh := make(chan struct{}, 1)
-
-	container, err := NewAppContainer(cfg)
-	if err != nil {
-		log.WithError(err).Fatal("failed to init app container")
-	}
-	defer container.Close()
-
-	if cfg.FileStoragePath != "" {
-		defer backup(cfg.FileStoragePath, container.Storage) //nolint:errcheck
-	}
-
-	log.Info("Server starting")
-
-	if cfg.StoreInterval > 0 && cfg.FileStoragePath != "" {
-		go func() {
-			for {
-				select {
-				case <-doneCh:
-					return
-				default:
-					time.Sleep(cfg.StoreInterval)
-				}
-
-				if err := backup(cfg.FileStoragePath, container.Storage); err != nil {
-					log.WithError(err).Error("failed to backup metrics")
-				}
-			}
-		}()
-	}
-
-	srv := httpserver.New(ConfigureRouter(container), httpserver.WithAddr(cfg.Address))
-
-	log.Info("Server started")
-
-	go func() {
-		select {
-		case sig := <-sigCh:
-			log.WithField("signal", sig).Info("Signal received")
-		case err := <-srv.Notify():
-			if !errors.Is(err, http.ErrServerClosed) {
-				log.WithError(err).Error("Failed to listen and serve")
-			}
-		}
-
-		log.Info("Shutting down")
-
-		if err := srv.Shutdown(); err != nil {
-			log.WithError(err).Error("Failed to shutdown")
-		}
-
-		close(doneCh)
-	}()
-
-	<-doneCh
-	log.Info("Server stopped")
+type App struct {
+	cfg       *Config
+	logger    *logrus.Logger
+	db        *sqlx.DB
+	storager  storages.MetricStorager
+	decryptor chunkedrsa.Decryptor
 }
 
-func ConfigureRouter(container *AppContainer) http.Handler {
+func NewApp(
+	cfg *Config,
+	logger *logrus.Logger,
+	db *sqlx.DB,
+	storage storages.MetricStorager,
+	decryptor chunkedrsa.Decryptor,
+) *App {
+	return &App{cfg: cfg, logger: logger, db: db, storager: storage, decryptor: decryptor}
+}
+
+func (app *App) Run(sigCh <-chan os.Signal) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	app.logger.Info("Server starting")
+
+	if app.cfg.FileStoragePath != "" {
+		defer Backup(app.cfg.FileStoragePath, app.storager) // nolint:errcheck
+
+		if app.cfg.StoreInterval > 0 {
+			go BackupWorker(ctx, app.cfg.StoreInterval, app.cfg.FileStoragePath, app.storager)
+		}
+	}
+
+	if err := app.restore(); err != nil {
+		app.logger.WithError(err).Error("failed to restore metrics")
+	}
+
+	srv := httpserver.New(configureRouter(app), httpserver.WithAddr(app.cfg.Address))
+
+	app.logger.Info("Server started")
+
+	go func() {
+		defer cancel()
+
+		select {
+		case sig := <-sigCh:
+			app.logger.WithField("signal", sig).Info("Signal received")
+		case err := <-srv.Notify():
+			if !errors.Is(err, http.ErrServerClosed) {
+				app.logger.WithError(err).Error("Failed to listen and serve")
+			}
+		}
+
+		app.logger.Info("Shutting down")
+
+		if err := srv.Shutdown(); err != nil {
+			app.logger.WithError(err).Error("Failed to shutdown")
+		}
+	}()
+
+	<-ctx.Done()
+	app.logger.Info("Server stopped")
+}
+
+func configureRouter(app *App) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middlewares.Logger)
 
@@ -86,28 +89,42 @@ func ConfigureRouter(container *AppContainer) http.Handler {
 	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	r.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
 
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		if app.db != nil {
+			if err := app.db.PingContext(r.Context()); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+
+				return
+			}
+		}
+	})
+
 	r.Group(func(r chi.Router) {
-		if container.Cfg.SecretKey != "" {
-			r.Use(middlewares.CheckSum(container.Cfg.SecretKey))
+		if app.cfg.SecretKey != "" {
+			r.Use(middlewares.CheckSum(app.cfg.SecretKey))
 		}
 
 		r.Use(middlewares.Gzip)
-		r.Use(middlewares.Decrypt(container.Decryptor))
+		r.Use(middlewares.Decrypt(app.decryptor))
 
-		if container.Cfg.SecretKey != "" {
-			r.Use(middlewares.Sign(container.Cfg.SecretKey))
+		if app.cfg.SecretKey != "" {
+			r.Use(middlewares.Sign(app.cfg.SecretKey))
 		}
 
-		r.Mount("/", endpoints.NewAPIRouter(container.Storage))
+		r.Mount("/", endpoints.NewAPIRouter(app.storager))
 	})
 
 	return r
 }
 
-func restore(path string, storager storages.MetricStorager) error {
-	fd, err := os.OpenFile(path, os.O_RDONLY, 0o666)
+func (app *App) restore() error {
+	if !app.cfg.Restore || app.cfg.FileStoragePath == "" {
+		return nil
+	}
+
+	fd, err := os.OpenFile(app.cfg.FileStoragePath, os.O_RDONLY, 0o666)
 	if os.IsNotExist(err) {
-		_, createErr := os.OpenFile(path, os.O_CREATE, 0o666)
+		_, createErr := os.OpenFile(app.cfg.FileStoragePath, os.O_CREATE, 0o666)
 
 		return errors.Join(err, createErr)
 	}
@@ -118,20 +135,5 @@ func restore(path string, storager storages.MetricStorager) error {
 
 	defer fd.Close()
 
-	return json.NewDecoder(fd).Decode(storager)
-}
-
-func backup(path string, storager storages.MetricStorager) error {
-	fd, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0o666)
-	if err != nil {
-		return err
-	}
-
-	defer fd.Close()
-
-	if err := json.NewEncoder(fd).Encode(storager); err != nil {
-		return err
-	}
-
-	return nil
+	return json.NewDecoder(fd).Decode(app.storager)
 }

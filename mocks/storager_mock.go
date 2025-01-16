@@ -71,20 +71,6 @@ func (mr *MockMetricStoragerMockRecorder) GetOne(ctx, id, mType any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOne", reflect.TypeOf((*MockMetricStorager)(nil).GetOne), ctx, id, mType)
 }
 
-// Ping mocks base method.
-func (m *MockMetricStorager) Ping(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ping", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Ping indicates an expected call of Ping.
-func (mr *MockMetricStoragerMockRecorder) Ping(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockMetricStorager)(nil).Ping), ctx)
-}
-
 // Save mocks base method.
 func (m *MockMetricStorager) Save(ctx context.Context, metric *schemas.Metric) error {
 	m.ctrl.T.Helper()

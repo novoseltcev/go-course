@@ -1,17 +1,15 @@
 package main
 
-import (
-	log "github.com/sirupsen/logrus"
-)
+import "fmt"
 
-//nolint: gochecknoglobals
+// nolint: gochecknoglobals
 var (
 	buildVersion string
 	buildDate    string
 	buildCommit  string
 )
 
-func main() {
+func init() {
 	if buildVersion == "" {
 		buildVersion = "N/A"
 	}
@@ -23,12 +21,13 @@ func main() {
 	if buildCommit == "" {
 		buildCommit = "N/A"
 	}
+}
 
-	log.Printf("Build version: %s\n", buildVersion)
-	log.Printf("Build date: %s\n", buildDate)
-	log.Printf("Build commit: %s\n", buildCommit)
+func main() {
+	cmd := Cmd()
+	cmd.Version = fmt.Sprintf("%s\nbuild date: %s\nbuild commit: %s", buildVersion, buildDate, buildCommit)
 
-	if err := Cmd().Execute(); err != nil {
+	if err := cmd.Execute(); err != nil {
 		panic(err)
 	}
 }

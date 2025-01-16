@@ -22,11 +22,14 @@ output:
 linters:
   enable-all: true
   disable:
+    - gochecknoinits
     - goconst
     - godox
     - gomnd
     - execinquery
+    - exhaustruct
     - wrapcheck
+    - nolintlint  # Conflicts with gofmt
 
 linters-settings:
   errcheck:
@@ -40,13 +43,6 @@ linters-settings:
         deny:
           - pkg: "github.com/pkg/errors"
             desc: Should be replaced by standard lib errors package
-  exhaustruct:
-    exclude:
-      - '.+/cobra\.Command$'
-      - '.+/schemas\.Metric$'
-      - '.+/retry\.Options$'
-      - '.+/*_test\.<anonymous>$'
-      - '.+/analysis\.Analyzer$'
   gci:
     sections:
       - standard
@@ -64,7 +60,7 @@ linters-settings:
       - empty
       - stdlib
       - generic
-      - github.com/novoseltcev/go-course/internal/storages.MetricStorager
+      - (or|er)$
   lll:
     line-length: 120
   misspell:
@@ -72,9 +68,10 @@ linters-settings:
   mnd:
     ignored-numbers:
       - '0o666'
+      - 1024
+
   varnamelen:
     check-return: true
-    # check-type-param: true
     ignore-type-assert-ok: true
     ignore-map-index-ok: true
     ignore-chan-recv-ok: true
@@ -83,21 +80,33 @@ linters-settings:
       - tt
       - ch
       - id
-      - r
       - fn
     ignore-decls:
+      - b []byte
+      - p []byte
+      - i int
+      - n int
+      - fd *os.File
+      - fd afero.File
+      - fs afero.Fs
+      # sync
+      - wg sync.WaitGroup
+      - g *errgroup.Group
+      # db
+      - db *sqlx.DB
+      - tx *sql.Tx
+      # http
+      - r *http.Request
+      - w http.ResponseWriter
+      - r *chi.Mux
+      - r chi.Router
+      # tests
       - t testing.T
       - b testing.B
       - ts *httptest.Server
-      - r *http.Request
-      - w http.ResponseWriter
+      # custom
       - c Client
-      - wg sync.WaitGroup
-      - r *chi.Mux
-      - tx *sql.Tx
-      - fd *os.File
-      - i int
-      - p []byte
+      - km *chunkedrsa.KeyManager
   
 issues:
   exclude-rules:
@@ -105,9 +114,9 @@ issues:
       linters:
         - err113
         - errcheck
-        - exhaustruct
         - dupl
         - funlen
+        - gochecknoglobals
         - gosec
         - unparam
         - wsl

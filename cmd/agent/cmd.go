@@ -1,77 +1,102 @@
 package main
 
 import (
+	"compress/gzip"
+	"crypto/sha256"
+	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/caarlos0/env/v10"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"github.com/novoseltcev/go-course/internal/agent"
+	"github.com/novoseltcev/go-course/internal/agent/reporters"
+	"github.com/novoseltcev/go-course/pkg/chunkedrsa"
+	"github.com/novoseltcev/go-course/pkg/compress"
+	"github.com/novoseltcev/go-course/pkg/hash"
+	"github.com/novoseltcev/go-course/pkg/retry"
 )
 
+// nolint: gochecknoglobals
+var configFile string
+
+// nolint: funlen
 func Cmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "agent",
-		Short: "Use this command to run agent",
-		Run: func(cmd *cobra.Command, _ []string) {
-			config, err := getConfig(cmd.Flags())
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			config.PollInterval *= time.Second
-			config.RateLimit *= time.Second
-
-			a := agent.NewAgent(config)
-			ctx, _ := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
-			a.Start(ctx)
-		},
+	cfg := &agent.Config{
+		Address:        "http://localhost:8080",
+		PollInterval:   time.Second * 1,
+		ReportInterval: time.Second * 5, // nolint:mnd
 	}
 
-	flags := cmd.Flags()
-	flags.StringP("a", "a", "localhost:8080", "Server address")
-	flags.IntP("p", "p", 0, "poll runtime metrics interval")
-	flags.IntP("r", "r", 0, "rate limit to send metrics")
-	flags.StringP("k", "k", "", "Secret key for hashing data")
+	cmd := &cobra.Command{
+		Use:   "agent",
+		Short: "CLI metrics agent",
+		Run: func(cmd *cobra.Command, _ []string) {
+			logger := logrus.New()
+			fs := afero.NewOsFs()
+
+			if err := cfg.Load(fs, configFile, cmd.Flags()); err != nil {
+				logger.WithError(err).Panic("failed to parse config")
+			}
+
+			logger.SetLevel(logrus.DebugLevel) // TODO: set log level from config
+
+			compressor, err := compress.NewGzip(gzip.BestCompression)
+			if err != nil {
+				logger.WithError(err).Panic("failed to initialize compressor")
+			}
+
+			opts := []reporters.Option{
+				reporters.WithCompression(compressor),
+				reporters.WithRetry(retry.Options{
+					Retries:  3, // nolint:mnd
+					Attempts: []time.Duration{time.Second, 3 * time.Second, 5 * time.Second},
+				}),
+			}
+			if cfg.CryptoKey != "" {
+				km, err := chunkedrsa.NewKeyManagerFromFile(fs, cfg.CryptoKey)
+				if err != nil {
+					logger.WithError(err).Panic("failed to load crypto key")
+				}
+
+				encryptor, err := chunkedrsa.NewEncryptor(km.MustPublicKey(), chunkedrsa.PKCS1v15Algorithm)
+				if err != nil {
+					logger.WithError(err).Panic("failed to initialize encryptor")
+				}
+
+				opts = append(opts, reporters.WithEncryption(encryptor))
+			}
+
+			if cfg.SecretKey != "" {
+				opts = append(opts, reporters.WithCheckSum(hash.NewHMAC(cfg.SecretKey, sha256.New)))
+			}
+
+			reporter := reporters.NewHTTPClient(http.DefaultClient, cfg.Address, opts...)
+			app := agent.NewApp(cfg, logger, reporter)
+
+			sigCh := make(chan os.Signal, 1)
+			signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+			defer signal.Stop(sigCh)
+
+			app.Run(sigCh)
+		},
+	}
+	initFlags(cfg, cmd.Flags())
 
 	return cmd
 }
 
-func getConfig(flags *pflag.FlagSet) (*agent.Config, error) {
-	address, err := flags.GetString("a")
-	if err != nil {
-		return nil, err
-	}
-
-	pollInterval, err := flags.GetInt("p")
-	if err != nil {
-		return nil, err
-	}
-
-	rateLimit, err := flags.GetInt("r")
-	if err != nil {
-		return nil, err
-	}
-
-	secretKey, err := flags.GetString("k")
-	if err != nil {
-		return nil, err
-	}
-
-	config := agent.Config{
-		Address:      address,
-		PollInterval: time.Duration(pollInterval),
-		RateLimit:    time.Duration(rateLimit),
-		SecretKey:    secretKey,
-	}
-
-	if err := env.Parse(&config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
+// initFlags initializes flags for parsing and help command.
+func initFlags(cfg *agent.Config, flags *pflag.FlagSet) {
+	flags.StringVarP(&configFile, "config", "c", "", "Path to config file")
+	flags.StringVarP(&cfg.Address, "a", "a", cfg.Address, "Server address")
+	flags.StringVarP(&cfg.RawPollInterval, "p", "p", cfg.RawPollInterval, "Poll runtime metrics interval")
+	flags.StringVarP(&cfg.RawReportInterval, "r", "r", cfg.RawReportInterval, "Rate limit to send metrics")
+	flags.StringVarP(&cfg.SecretKey, "k", "k", cfg.SecretKey, "Secret key for hashing data")
+	flags.StringVar(&cfg.CryptoKey, "crypto-key", cfg.CryptoKey, "Path to public key to encrypt data")
 }

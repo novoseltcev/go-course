@@ -6,7 +6,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-var Analyzer = &analysis.Analyzer{ //nolint:gochecknoglobals
+var Analyzer = &analysis.Analyzer{ // nolint:gochecknoglobals
 	Name: "noexit",
 	Doc:  "Checks usage os.Exit in the main function",
 	URL:  "https://github.com/go-course/pkg/linters/noexit",
@@ -32,7 +32,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 	}
 
-	return nil, nil //nolint:nilnil
+	return nil, nil // nolint:nilnil
 }
 
 func findExit(pass *analysis.Pass, fn *ast.FuncDecl, decls []ast.Decl) {

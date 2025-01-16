@@ -1,4 +1,4 @@
-main: generate format lint build up migrate server
+main: generate fix lint test cover build up migrate server
 
 generate:
 	go generate ./...
@@ -27,12 +27,12 @@ staticlint: build-staticlint $(STATICLINT_DIR)/staticlint
 
 .PHONY: agent
 agent: $(AGENT_DIR)/agent
-	$(AGENT_DIR)/agent -a 0.0.0.0:8080 -p 2 -r 5
+	$(AGENT_DIR)/agent -c ./config/agent.json
 
 DATABASE_URI=postgresql://postgres:postgres@0.0.0.0:5432/praktikum?sslmode=disable
 .PHONY: server
 server: $(SERVER_DIR)/server
-	DATABASE_DSN=$(DATABASE_URI) RESTORE=true STORE_INTERVAL=2 FILE_STORAGE_PATH=$(SERVER_DIR)/backup.json $(SERVER_DIR)/server -a :8080
+	$(SERVER_DIR)/server -d $(DATABASE_URI) --config ./config/server.json
 
 migrate:
 	migrate -source file://migrations -database $(DATABASE_URI) up
@@ -49,7 +49,7 @@ psql:
 	psql $(DATABASE_URI)
 
 
-format:
+fix:
 	golangci-lint run --fix
 
 lint: build-staticlint

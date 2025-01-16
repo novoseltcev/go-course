@@ -1,33 +1,29 @@
 package endpoints_test
 
 import (
-	"errors"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/steinfletcher/apitest"
 	gomock "go.uber.org/mock/gomock"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/internal/storages"
 	"github.com/novoseltcev/go-course/mocks"
+	"github.com/novoseltcev/go-course/pkg/testutils"
 )
 
-// nolint: gochecknoglobals
 var (
-	errTest   = errors.New("test error")
-	testID    = "test"
 	testValue = 10.123
 	testDelta = int64(10)
 	testGauge = schemas.Metric{
-		ID:    testID,
+		ID:    testutils.STRING,
 		MType: schemas.Gauge,
 		Value: &testValue,
 	}
 	testCounter = schemas.Metric{
-		ID:    testID,
+		ID:    testutils.STRING,
 		MType: schemas.Counter,
 		Delta: &testDelta,
 	}
@@ -57,14 +53,14 @@ func TestGetOneMetric(t *testing.T) {
 	}{
 		{
 			"success gauge",
-			got{id: testID, Type: schemas.Gauge},
+			got{id: testutils.STRING, Type: schemas.Gauge},
 			&want{&testGauge, nil},
 			http.StatusOK,
 			`10.123`,
 		},
 		{
 			"success counter",
-			got{id: testID, Type: schemas.Counter},
+			got{id: testutils.STRING, Type: schemas.Counter},
 			&want{&testCounter, nil},
 			http.StatusOK,
 			`10`,
@@ -78,35 +74,35 @@ func TestGetOneMetric(t *testing.T) {
 		},
 		{
 			"failed get",
-			got{id: testID, Type: schemas.Gauge},
-			&want{nil, errTest},
+			got{id: testutils.STRING, Type: schemas.Gauge},
+			&want{nil, testutils.Err},
 			http.StatusInternalServerError,
 			"failed to get metric\n",
 		},
 		{
 			name: "invalid metric type",
-			got:  got{id: testID, Type: "unknown"},
+			got:  got{id: testutils.STRING, Type: "unknown"},
 			code: http.StatusBadRequest,
-			body: "type is invalid\n",
+			body: "metric-id validator: type is invalid\n",
 		},
 		{
 			"failed serialization unknown",
-			got{id: testID, Type: schemas.Counter},
-			&want{&schemas.Metric{ID: testID, MType: "unknown"}, nil},
+			got{id: testutils.STRING, Type: schemas.Counter},
+			&want{&schemas.Metric{ID: testutils.STRING, MType: "unknown"}, nil},
 			http.StatusInternalServerError,
 			"failed to serialize\n",
 		},
 		{
 			"failed serialization empty delta",
-			got{id: testID, Type: schemas.Counter},
-			&want{&schemas.Metric{ID: testID, MType: schemas.Counter}, nil},
+			got{id: testutils.STRING, Type: schemas.Counter},
+			&want{&schemas.Metric{ID: testutils.STRING, MType: schemas.Counter}, nil},
 			http.StatusInternalServerError,
 			"failed to serialize\n",
 		},
 		{
 			"failed serialization empty value",
-			got{id: testID, Type: schemas.Gauge},
-			&want{&schemas.Metric{ID: testID, MType: schemas.Gauge}, nil},
+			got{id: testutils.STRING, Type: schemas.Gauge},
+			&want{&schemas.Metric{ID: testutils.STRING, MType: schemas.Gauge}, nil},
 			http.StatusInternalServerError,
 			"failed to serialize\n",
 		},
@@ -115,20 +111,19 @@ func TestGetOneMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			storager := mocks.NewMockMetricStorager(ctrl)
-			router := endpoints.NewAPIRouter(storager)
 
+			storager := mocks.NewMockMetricStorager(ctrl)
 			if tt.want != nil {
 				storager.EXPECT().GetOne(gomock.Any(), tt.got.id, tt.got.Type).Return(tt.want.metric, tt.want.err)
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/value/"+tt.got.Type+"/"+tt.got.id, http.NoBody)
-			w := httptest.NewRecorder()
-
-			router.ServeHTTP(w, req)
-
-			assert.Equal(t, tt.code, w.Code)
-			assert.Equal(t, tt.body, w.Body.String())
+			apitest.New(tt.name).
+				Handler(endpoints.NewAPIRouter(storager)).
+				Getf("/value/%s/%s", tt.got.Type, tt.got.id).
+				Expect(t).
+				Status(tt.code).
+				Body(tt.body).
+				End()
 		})
 	}
 }

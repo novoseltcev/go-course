@@ -11,21 +11,16 @@ import (
 )
 
 type PgStorage struct {
-	DB *sqlx.DB
+	db *sqlx.DB
 }
 
-func NewPgStorage(url string) *PgStorage {
-	db, err := sqlx.Open("pgx", url)
-	if err != nil {
-		panic(errors.Join(err, errors.New("failed to open database"))) //nolint: err113
-	}
-
-	return &PgStorage{DB: db}
+func NewPgStorage(db *sqlx.DB) *PgStorage {
+	return &PgStorage{db: db}
 }
 
 func (s *PgStorage) GetOne(ctx context.Context, id, mType string) (*schemas.Metric, error) {
 	var result schemas.Metric
-	err := s.DB.GetContext(
+	err := s.db.GetContext(
 		ctx,
 		&result,
 		"SELECT name, type, value, delta FROM metrics WHERE type = $1 AND name = $2",
@@ -42,13 +37,13 @@ func (s *PgStorage) GetOne(ctx context.Context, id, mType string) (*schemas.Metr
 
 func (s *PgStorage) GetAll(ctx context.Context) ([]schemas.Metric, error) {
 	var metrics []schemas.Metric
-	err := s.DB.SelectContext(ctx, &metrics, "SELECT name, type, value, delta FROM metrics")
+	err := s.db.SelectContext(ctx, &metrics, "SELECT name, type, value, delta FROM metrics")
 
 	return metrics, err
 }
 
 func (s *PgStorage) Save(ctx context.Context, metric *schemas.Metric) error {
-	stmt, err := s.DB.PrepareContext(
+	stmt, err := s.db.PrepareContext(
 		ctx,
 		`INSERT INTO metrics (name, type, value, delta)
 		VALUES ($1, $2, $3, $4)
@@ -68,7 +63,7 @@ func (s *PgStorage) Save(ctx context.Context, metric *schemas.Metric) error {
 }
 
 func (s *PgStorage) SaveBatch(ctx context.Context, metrics []schemas.Metric) error {
-	tx, err := s.DB.BeginTx(ctx, nil)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -92,12 +87,4 @@ func (s *PgStorage) SaveBatch(ctx context.Context, metrics []schemas.Metric) err
 	}
 
 	return tx.Commit()
-}
-
-func (s *PgStorage) Ping(ctx context.Context) error {
-	return s.DB.PingContext(ctx)
-}
-
-func (s *PgStorage) Close() error {
-	return s.DB.Close()
 }

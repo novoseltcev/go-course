@@ -52,7 +52,6 @@ func (s *PgStorage) Save(ctx context.Context, metric *schemas.Metric) error {
 	if err != nil {
 		return err
 	}
-
 	defer stmt.Close()
 
 	if _, err := stmt.ExecContext(ctx, metric.ID, metric.MType, metric.Value, metric.Delta); err != nil {

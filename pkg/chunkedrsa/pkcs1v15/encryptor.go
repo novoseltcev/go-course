@@ -22,7 +22,11 @@ func NewEncryptor(key *rsa.PublicKey) *Encryptor {
 func (e *Encryptor) Encrypt(data []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 
-	chunks := utils.SplitToChunks(data, e.publicKey.Size()-11) // nolint: mnd // 11 bytes for PKCS1 v1.5 padding
+	chunks, err := utils.SplitToChunks(data, e.publicKey.Size()-11) // nolint: mnd // 11 bytes for PKCS1 v1.5 padding
+	if err != nil {
+		return nil, err
+	}
+
 	for _, chunk := range chunks {
 		encryptedChunk, err := rsa.EncryptPKCS1v15(rand.Reader, e.publicKey, chunk)
 		if err != nil {

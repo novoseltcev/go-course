@@ -3,12 +3,14 @@ package pkcs1v15_test
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/novoseltcev/go-course/pkg/chunkedrsa/pkcs1v15"
+	"github.com/novoseltcev/go-course/pkg/testutils"
 )
 
 func encrypt(t *testing.T, key *rsa.PublicKey, data []byte) []byte {
@@ -55,4 +57,30 @@ func TestDecryptChunks(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, data, decrypted)
+}
+
+func TestDecrypt_FailsChunking(t *testing.T) {
+	t.Parallel()
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	key.N = big.NewInt(0) // Make key to invalid
+
+	dec := pkcs1v15.NewDecryptor(key)
+
+	_, err = dec.Decrypt(testutils.Bytes)
+	assert.Error(t, err)
+}
+
+func TestDecrypt_FailsChunkEncryption(t *testing.T) {
+	t.Parallel()
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	key.PublicKey.E = 0 // Make public key to invalid
+
+	dec := pkcs1v15.NewDecryptor(key)
+
+	_, err = dec.Decrypt(testutils.Bytes)
+	assert.Error(t, err, "crypto/rsa: public exponent too small")
 }

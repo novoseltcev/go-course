@@ -3,7 +3,6 @@ package agent
 
 import (
 	"encoding/json"
-	"os"
 	"time"
 
 	"github.com/caarlos0/env/v10"
@@ -21,7 +20,7 @@ type Config struct {
 	ReportInterval    time.Duration `json:"-"`
 }
 
-func (c *Config) Load(fs afero.Fs, path string, flags *pflag.FlagSet) error {
+func (c *Config) Load(fs afero.Fs, path string, flags *pflag.FlagSet, args []string) error {
 	if path != "" {
 		fd, err := fs.Open(path)
 		if err != nil {
@@ -34,7 +33,7 @@ func (c *Config) Load(fs afero.Fs, path string, flags *pflag.FlagSet) error {
 		}
 	}
 
-	if err := flags.Parse(os.Args[1:]); err != nil {
+	if err := flags.Parse(args); err != nil {
 		return err
 	}
 
@@ -42,14 +41,14 @@ func (c *Config) Load(fs afero.Fs, path string, flags *pflag.FlagSet) error {
 		return err
 	}
 
-	if err := c.parseRawFields(); err != nil {
+	if err := c.ParseRawFields(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *Config) parseRawFields() error {
+func (c *Config) ParseRawFields() error {
 	var err error
 	if c.RawPollInterval != "" {
 		c.PollInterval, err = time.ParseDuration(c.RawPollInterval)

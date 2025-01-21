@@ -5,11 +5,16 @@ import (
 )
 
 const (
-	STRING = "string"
-	INT    = 10
-	FLAOT  = 10.123
-	JSON   = `{"ping": "pong"}`
-	URL    = "http://localhost"
+	STRING  = "string"
+	INT     = 10
+	FLAOT   = 10.123
+	JSON    = `{"ping": "pong"}`
+	URL     = "http://localhost"
+	UNKNOWN = "unknown"
 )
 
-var Err = errors.New("test error")
+// nolint: gochecknoglobals
+var (
+	Err   = errors.New("test error")
+	Bytes = []byte{1, 2, 3}
+)

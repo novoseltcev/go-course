@@ -2,6 +2,7 @@ package main
 
 import (
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"net/http"
 	"os"
@@ -40,7 +41,7 @@ func Cmd() *cobra.Command {
 			logger := logrus.New()
 			fs := afero.NewOsFs()
 
-			if err := cfg.Load(fs, configFile, cmd.Flags()); err != nil {
+			if err := cfg.Load(fs, configFile, cmd.Flags(), os.Args[1:]); err != nil {
 				logger.WithError(err).Panic("failed to parse config")
 			}
 
@@ -77,13 +78,12 @@ func Cmd() *cobra.Command {
 			}
 
 			reporter := reporters.NewHTTPClient(http.DefaultClient, cfg.Address, opts...)
-			app := agent.NewApp(cfg, logger, reporter)
+			app := agent.NewApp(cfg, logger, fs, reporter)
 
-			sigCh := make(chan os.Signal, 1)
-			signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-			defer signal.Stop(sigCh)
+			ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+			defer cancel()
 
-			app.Run(sigCh)
+			app.Run(ctx)
 		},
 	}
 	initFlags(cfg, cmd.Flags())

@@ -8,13 +8,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/novoseltcev/go-course/pkg/testutils"
 	"github.com/novoseltcev/go-course/pkg/workers"
 )
 
 func TestConsumerSuccess(t *testing.T) {
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-
 	defer cancel()
 
 	calls := 0
@@ -46,11 +46,10 @@ func TestConsumerErr(t *testing.T) {
 
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-
 	defer cancel()
 
 	go workers.Consumer(ctx, ch, func(_ context.Context, _ int) error {
-		return errSome
+		return testutils.Err
 	})
 
 	ch <- 1
@@ -61,7 +60,6 @@ func TestConsumerErr(t *testing.T) {
 func TestAntiFraudConsumerOnce(t *testing.T) {
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond+500*time.Microsecond)
-
 	defer cancel()
 
 	calls := 0
@@ -89,7 +87,6 @@ func TestAntiFraudConsumerOnce(t *testing.T) {
 func TestAntiFraudConsumerMany(t *testing.T) {
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Millisecond+500*time.Microsecond)
-
 	defer cancel()
 
 	calls := 0
@@ -117,7 +114,6 @@ func TestAntiFraudConsumerMany(t *testing.T) {
 func TestAntiFraudConsumerNotCalledFn(t *testing.T) {
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-
 	defer cancel()
 
 	calls := 0
@@ -145,7 +141,6 @@ func TestAntiFraudConsumerNotCalledFn(t *testing.T) {
 func TestAntiFraudConsumerErr(t *testing.T) {
 	ch := make(chan int)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Millisecond)
-
 	defer cancel()
 
 	calls := 0
@@ -153,7 +148,7 @@ func TestAntiFraudConsumerErr(t *testing.T) {
 	go workers.AntiFraudConsumer(ctx, ch, func(_ context.Context, _ []int) error {
 		calls++
 
-		return errSome
+		return testutils.Err
 	}, time.Millisecond)
 
 	go func() {

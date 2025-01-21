@@ -188,3 +188,28 @@ func TestReportFailedCheckSum(t *testing.T) {
 
 	assert.EqualError(t, reporter.Report(context.TODO(), testMetrics), "cannot get hash: "+testutils.Err.Error())
 }
+
+func TestReportWithNilRequestBodySkipSend(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	enc := NewMockencryptor(ctrl)
+	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithEncryption(enc))
+
+	enc.EXPECT().Encrypt(gomock.Any()).Return([]byte{}, nil)
+	gock.New(testutils.URL).Post("/").Times(0)
+
+	assert.NoError(t, reporter.Report(context.TODO(), testMetrics))
+}
+
+func TestReportFailsCreateRequest(t *testing.T) {
+	t.Parallel()
+
+	reporter := reporters.NewHTTPClient(http.DefaultClient, "\t")
+
+	assert.ErrorContains(t,
+		reporter.Report(context.TODO(), testMetrics),
+		"cannot create request: ",
+	)
+}

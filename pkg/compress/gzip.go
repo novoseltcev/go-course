@@ -9,7 +9,7 @@ import (
 )
 
 type GzipCompressor struct {
-	level int
+	Level int
 }
 
 var ErrCompressionLevel = errors.New("invalid compression level")
@@ -19,13 +19,13 @@ func NewGzip(level int) (*GzipCompressor, error) {
 		return nil, fmt.Errorf("%w: %d", ErrCompressionLevel, level)
 	}
 
-	return &GzipCompressor{level: level}, nil
+	return &GzipCompressor{Level: level}, nil
 }
 
 func (gc *GzipCompressor) Compress(data []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 
-	gzw, err := gzip.NewWriterLevel(buf, gc.level)
+	gzw, err := gzip.NewWriterLevel(buf, gc.Level)
 	if err != nil {
 		return nil, err
 	}

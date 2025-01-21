@@ -5,28 +5,34 @@ import (
 	"errors"
 	"net/http"
 	_ "net/http/pprof" // nolint:gosec
-	"os"
 
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 
 	"github.com/novoseltcev/go-course/internal/agent/collectors"
-	"github.com/novoseltcev/go-course/internal/agent/reporters"
+	"github.com/novoseltcev/go-course/internal/schemas"
 	"github.com/novoseltcev/go-course/pkg/httpserver"
 	"github.com/novoseltcev/go-course/pkg/workers"
 )
 
+//go:generate mockgen -source=app.go -destination=./app_mock_test.go -package=agent_test
+type Reporter interface {
+	Report(ctx context.Context, metrics []schemas.Metric) error
+}
+
 type App struct {
 	cfg      *Config
 	logger   *logrus.Logger
-	reporter reporters.Reporter
+	fs       afero.Fs
+	reporter Reporter
 }
 
-func NewApp(cfg *Config, logger *logrus.Logger, reporter reporters.Reporter) *App {
-	return &App{cfg: cfg, logger: logger, reporter: reporter}
+func NewApp(cfg *Config, logger *logrus.Logger, fs afero.Fs, reporter Reporter) *App {
+	return &App{cfg: cfg, logger: logger, fs: fs, reporter: reporter}
 }
 
-func (app *App) Run(sigCh <-chan os.Signal) {
-	ctx, cancel := context.WithCancel(context.Background())
+func (app *App) Run(ctx context.Context) {
+	doneCh := make(chan struct{})
 
 	app.logger.Info("Agent starting")
 
@@ -42,11 +48,11 @@ func (app *App) Run(sigCh <-chan os.Signal) {
 	app.logger.Info("Agent started")
 
 	go func() {
-		defer cancel()
+		defer close(doneCh)
 
 		select {
-		case sig := <-sigCh:
-			app.logger.WithField("signal", sig).Info("Signal received")
+		case <-ctx.Done():
+			app.logger.Info("Run is interrupted by context")
 		case err := <-srv.Notify():
 			if !errors.Is(err, http.ErrServerClosed) {
 				app.logger.WithError(err).Error("Failed to listen and serve")
@@ -55,11 +61,11 @@ func (app *App) Run(sigCh <-chan os.Signal) {
 
 		app.logger.Info("Shutting down")
 
-		if err := srv.Shutdown(); err != nil {
+		if err := srv.Shutdown(); err != nil { // nolint:contextcheck
 			app.logger.WithError(err).Error("Failed to shutdown")
 		}
 	}()
 
-	<-ctx.Done()
+	<-doneCh
 	app.logger.Info("Agent stopped")
 }

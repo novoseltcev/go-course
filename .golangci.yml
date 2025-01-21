@@ -86,6 +86,7 @@ linters-settings:
       - p []byte
       - i int
       - n int
+      - v T
       - fd *os.File
       - fd afero.File
       - fs afero.Fs
@@ -104,6 +105,7 @@ linters-settings:
       - t testing.T
       - b testing.B
       - ts *httptest.Server
+      - m *migrate.Migrate
       # custom
       - c Client
       - km *chunkedrsa.KeyManager

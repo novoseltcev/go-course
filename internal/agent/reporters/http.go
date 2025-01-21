@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -132,6 +133,8 @@ func (rc *ReportClient) send(ctx context.Context, url string, body []byte) error
 
 	req.Header.Set("Content-Type", "application/json")
 
+	req.Header.Set("X-Real-IP", getIP())
+
 	if rc.cmp != nil {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
@@ -161,4 +164,21 @@ func (rc *ReportClient) send(ctx context.Context, url string, body []byte) error
 	log.WithFields(log.Fields{"url": req.URL, "status": resp.Status}).Info("report successfully sent")
 
 	return nil
+}
+
+func getIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+
+	return ""
 }

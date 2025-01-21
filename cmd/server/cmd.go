@@ -95,4 +95,5 @@ func initFlags(cfg *server.Config, flags *pflag.FlagSet) {
 	flags.BoolVarP(&cfg.Restore, "r", "r", cfg.Restore, "Restore from backup after restart")
 	flags.StringVarP(&cfg.SecretKey, "k", "k", cfg.SecretKey, "Secret key for hashing data")
 	flags.StringVar(&cfg.CryptoKey, "crypto-key", cfg.CryptoKey, "Path to private key for decrypt data")
+	flags.StringArrayVarP(&cfg.RawTrustedSubnets, "trusted-subnets", "t", cfg.RawTrustedSubnets, "Trusted subnets")
 }

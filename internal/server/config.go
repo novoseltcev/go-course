@@ -3,6 +3,7 @@ package server
 
 import (
 	"encoding/json"
+	"net"
 	"time"
 
 	"github.com/caarlos0/env/v10"
@@ -11,14 +12,16 @@ import (
 )
 
 type Config struct {
-	Address          string        `env:"ADDRESS"           json:"address"`
-	Restore          bool          `env:"RESTORE"           json:"restore"`
-	FileStoragePath  string        `env:"FILE_STORAGE_PATH" json:"store_file"`
-	RawStoreInterval string        `env:"STORE_INTERVAL"    json:"store_interval"`
-	DatabaseDsn      string        `env:"DATABASE_DSN"      json:"database_dsn"`
-	SecretKey        string        `env:"KEY"               json:"-"`
-	CryptoKey        string        `env:"CRYPTO_KEY,file"   json:"crypto_key"`
-	StoreInterval    time.Duration `json:"-"`
+	Address           string        `env:"ADDRESS"           json:"address"`
+	Restore           bool          `env:"RESTORE"           json:"restore"`
+	FileStoragePath   string        `env:"FILE_STORAGE_PATH" json:"store_file"`
+	RawStoreInterval  string        `env:"STORE_INTERVAL"    json:"store_interval"`
+	DatabaseDsn       string        `env:"DATABASE_DSN"      json:"database_dsn"`
+	SecretKey         string        `env:"KEY"               json:"-"`
+	CryptoKey         string        `env:"CRYPTO_KEY,file"   json:"crypto_key"`
+	RawTrustedSubnets []string      `env:"TRUSTED_SUBNETS"   json:"trusted_subnets"`
+	TrustedSubnets    []net.IPNet   `json:"-"`
+	StoreInterval     time.Duration `json:"-"`
 }
 
 func (c *Config) Load(fs afero.Fs, path string, flags *pflag.FlagSet, args []string) error {
@@ -53,6 +56,18 @@ func (c *Config) ParseRawFields() error {
 	var err error
 	if c.RawStoreInterval != "" {
 		c.StoreInterval, err = time.ParseDuration(c.RawStoreInterval)
+	}
+
+	if c.RawTrustedSubnets != nil {
+		c.TrustedSubnets = make([]net.IPNet, 0, len(c.RawTrustedSubnets))
+		for _, rawSubnet := range c.RawTrustedSubnets {
+			_, subnet, err := net.ParseCIDR(rawSubnet)
+			if err != nil {
+				return err
+			}
+
+			c.TrustedSubnets = append(c.TrustedSubnets, *subnet)
+		}
 	}
 
 	return err

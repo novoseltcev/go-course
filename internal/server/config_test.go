@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"io"
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -27,23 +28,38 @@ func TestConfig_ParseRawFields(t *testing.T) {
 		require.NoError(t, cfg.ParseRawFields())
 
 		assert.Equal(t, time.Duration(0), cfg.StoreInterval)
+		assert.Equal(t, []net.IPNet(nil), cfg.TrustedSubnets)
 	})
 
 	t.Run("parse", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := server.Config{RawStoreInterval: "1s"}
+		cfg := server.Config{
+			RawStoreInterval: "1s",
+			RawTrustedSubnets: []string{
+				"127.0.0.0/8",
+				"192.168.0.0/16",
+			},
+		}
 		require.NoError(t, cfg.ParseRawFields())
 
 		assert.Equal(t, time.Second, cfg.StoreInterval)
 	})
 
-	t.Run("error", func(t *testing.T) {
+	t.Run("error RawStoreInterval", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := server.Config{RawStoreInterval: "1"}
 
 		assert.ErrorContains(t, cfg.ParseRawFields(), "time: ")
+	})
+
+	t.Run("error RawTrustedSubnets", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := server.Config{RawTrustedSubnets: []string{"1"}}
+
+		assert.ErrorContains(t, cfg.ParseRawFields(), "invalid CIDR address: ")
 	})
 }
 
@@ -72,20 +88,26 @@ func TestConfig_Load_WithFile_Success(t *testing.T) {
 			"store_file": "test.json",
 			"store_interval": "1s",
 			"database_dsn": "some",
-			"crypto_key": "key"
+			"crypto_key": "key",
+			"trusted_subnets": ["127.0.0.0/8", "192.168.0.0/16"]
 		}`),
 	)
 
 	require.NoError(t, cfg.Load(fs, testFile, flags, nil))
 
 	assert.Equal(t, server.Config{
-		Address:          "test",
-		Restore:          true,
-		FileStoragePath:  "test.json",
-		RawStoreInterval: "1s",
-		StoreInterval:    time.Second,
-		DatabaseDsn:      "some",
-		CryptoKey:        "key",
+		Address:           "test",
+		Restore:           true,
+		FileStoragePath:   "test.json",
+		RawStoreInterval:  "1s",
+		StoreInterval:     time.Second,
+		DatabaseDsn:       "some",
+		CryptoKey:         "key",
+		RawTrustedSubnets: []string{"127.0.0.0/8", "192.168.0.0/16"},
+		TrustedSubnets: []net.IPNet{
+			{IP: net.ParseIP("127.0.0.0").To4(), Mask: net.CIDRMask(8, 32)},
+			{IP: net.ParseIP("192.168.0.0").To4(), Mask: net.CIDRMask(16, 32)},
+		},
 	}, cfg)
 }
 

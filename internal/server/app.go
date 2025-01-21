@@ -122,10 +122,17 @@ func configureRouter(app *App) http.Handler {
 		}
 
 		r.Use(middlewares.Gzip)
-		r.Use(middlewares.Decrypt(app.decryptor))
+
+		if app.decryptor != nil {
+			r.Use(middlewares.Decrypt(app.decryptor))
+		}
 
 		if app.cfg.SecretKey != "" {
 			r.Use(middlewares.Sign(app.cfg.SecretKey))
+		}
+
+		if len(app.cfg.TrustedSubnets) > 0 {
+			r.Use(middlewares.TrustedSubnets(app.cfg.TrustedSubnets))
 		}
 
 		r.Mount("/", endpoints.NewAPIRouter(app.storager))

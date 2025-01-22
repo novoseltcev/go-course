@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	Address           string        `env:"ADDRESS"           json:"address"`
+	GRPCAddress       string        `env:"GRPC_ADDRESS"      json:"grpc_address"`
 	Restore           bool          `env:"RESTORE"           json:"restore"`
 	FileStoragePath   string        `env:"FILE_STORAGE_PATH" json:"store_file"`
 	RawStoreInterval  string        `env:"STORE_INTERVAL"    json:"store_interval"`
@@ -56,6 +57,9 @@ func (c *Config) ParseRawFields() error {
 	var err error
 	if c.RawStoreInterval != "" {
 		c.StoreInterval, err = time.ParseDuration(c.RawStoreInterval)
+		if err != nil {
+			return err
+		}
 	}
 
 	if c.RawTrustedSubnets != nil {
@@ -70,5 +74,5 @@ func (c *Config) ParseRawFields() error {
 		}
 	}
 
-	return err
+	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	_ "net/http/pprof" // nolint:gosec
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
@@ -15,7 +16,9 @@ import (
 	"github.com/novoseltcev/go-course/pkg/workers"
 )
 
-//go:generate mockgen -source=app.go -destination=./app_mock_test.go -package=agent_test
+const shutdownTimeout = 5 * time.Second
+
+//go:generate mockgen -source=app.go -destination=./app_mock_test.go -package=agent_test -typed
 type Reporter interface {
 	Report(ctx context.Context, metrics []schemas.Metric) error
 }
@@ -32,8 +35,6 @@ func NewApp(cfg *Config, logger *logrus.Logger, fs afero.Fs, reporter Reporter) 
 }
 
 func (app *App) Run(ctx context.Context) {
-	doneCh := make(chan struct{})
-
 	app.logger.Info("Agent starting")
 
 	runtimeMetricCh := workers.Producer(ctx, collectors.CollectRuntimeMetrics, app.cfg.PollInterval)
@@ -44,9 +45,11 @@ func (app *App) Run(ctx context.Context) {
 	go workers.AntiFraudConsumer(ctx, metricCh, app.reporter.Report, app.cfg.ReportInterval)
 
 	srv := httpserver.New(nil, httpserver.WithAddr(":9000"))
+	go srv.Run()
 
 	app.logger.Info("Agent started")
 
+	doneCh := make(chan struct{})
 	go func() {
 		defer close(doneCh)
 
@@ -61,7 +64,10 @@ func (app *App) Run(ctx context.Context) {
 
 		app.logger.Info("Shutting down")
 
-		if err := srv.Shutdown(); err != nil { // nolint:contextcheck
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil { // nolint: contextcheck
 			app.logger.WithError(err).Error("Failed to shutdown")
 		}
 	}()

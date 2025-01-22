@@ -1,2 +1,4 @@
 metrics_easyjson.go
 storager_mock.go
+metrics.pb.go
+metrics_grpc.pb.go

@@ -10,6 +10,10 @@ import (
 )
 
 func Backup(fs afero.Fs, path string, storager storages.MetricStorager) error {
+	if path == "" {
+		return nil
+	}
+
 	fd, err := fs.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0o666)
 	if err != nil {
 		return err

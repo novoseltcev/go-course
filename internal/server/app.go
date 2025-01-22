@@ -7,19 +7,26 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
 	"github.com/novoseltcev/go-course/internal/storages"
 	"github.com/novoseltcev/go-course/pkg/chunkedrsa"
+	"github.com/novoseltcev/go-course/pkg/grpcserver"
 	"github.com/novoseltcev/go-course/pkg/httpserver"
 	"github.com/novoseltcev/go-course/pkg/middlewares"
 	"github.com/novoseltcev/go-course/pkg/workers"
+	"github.com/novoseltcev/go-course/proto/metrics"
 )
+
+const shutdownTimeout = 5 * time.Second // nolint:mnd
 
 type App struct {
 	cfg       *Config
@@ -41,29 +48,9 @@ func NewApp(
 	return &App{cfg: cfg, logger: logger, fs: fs, db: db, storager: storage, decryptor: decryptor}
 }
 
+// nolint: funlen, cyclop
 func (app *App) Run(ctx context.Context) {
-	doneCh := make(chan struct{})
-
 	app.logger.Info("Server starting")
-
-	if app.cfg.FileStoragePath != "" {
-		defer Backup(app.fs, app.cfg.FileStoragePath, app.storager) // nolint:errcheck
-
-		if app.cfg.StoreInterval > 0 {
-			go workers.Every( // nolint:errcheck
-				ctx,
-				func(_ context.Context) error {
-					err := Backup(app.fs, app.cfg.FileStoragePath, app.storager)
-					if errors.Is(err, os.ErrPermission) {
-						return err
-					}
-
-					return nil
-				},
-				app.cfg.StoreInterval,
-			)
-		}
-	}
 
 	if err := app.restore(); err != nil {
 		app.logger.WithError(err).Error("failed to restore metrics")
@@ -71,25 +58,64 @@ func (app *App) Run(ctx context.Context) {
 		return
 	}
 
-	srv := httpserver.New(configureRouter(app), httpserver.WithAddr(app.cfg.Address))
+	defer func() {
+		if err := Backup(app.fs, app.cfg.FileStoragePath, app.storager); err != nil {
+			app.logger.WithError(err).Error("failed to backup metrics")
+		}
+	}()
+
+	if app.cfg.FileStoragePath != "" && app.cfg.StoreInterval > 0 {
+		go workers.Every( // nolint:errcheck
+			ctx,
+			func(_ context.Context) error {
+				err := Backup(app.fs, app.cfg.FileStoragePath, app.storager)
+				if errors.Is(err, os.ErrPermission) {
+					return err
+				}
+
+				return nil
+			},
+			app.cfg.StoreInterval,
+		)
+	}
+
+	httpSrv := httpserver.New(configureRouter(app), httpserver.WithAddr(app.cfg.Address))
+	go httpSrv.Run()
+
+	grpcSrv := grpcserver.New(app.cfg.GRPCAddress)
+	metrics.RegisterMetricsServiceServer(grpcSrv.GetServiceRegistrar(), NewGRPCMetricsServer(app.logger, app.storager))
+
+	go grpcSrv.Run()
 
 	app.logger.Info("Server started")
 
-	go func() {
+	doneCh := make(chan struct{})
+	go func() { // nolint: contextcheck
 		defer close(doneCh)
 
 		select {
 		case <-ctx.Done():
-			app.logger.Info("Run is interrupted by context")
-		case err := <-srv.Notify():
+			app.logger.Info("Interrupted by context")
+		case err := <-httpSrv.Notify():
 			if !errors.Is(err, http.ErrServerClosed) {
-				app.logger.WithError(err).Error("Failed to listen and serve")
+				app.logger.WithError(err).Error("Failed to listen and serve http")
+			}
+		case err := <-grpcSrv.Notify():
+			if !errors.Is(err, grpc.ErrServerStopped) {
+				app.logger.WithError(err).Error("Failed to listen and serve grpc")
 			}
 		}
 
 		app.logger.Info("Shutting down")
 
-		if err := srv.Shutdown(); err != nil { // nolint:contextcheck
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+
+		g, shutdownCtx := errgroup.WithContext(shutdownCtx)
+		g.Go(func() error { return httpSrv.Shutdown(shutdownCtx) })
+		g.Go(func() error { return grpcSrv.Shutdown(shutdownCtx) })
+
+		if err := g.Wait(); err != nil {
 			app.logger.WithError(err).Error("Failed to shutdown")
 		}
 	}()

@@ -1,6 +1,7 @@
 package httpserver_test
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -21,7 +22,6 @@ func TestNewWithAllOpts(t *testing.T) {
 
 	httpserver.New(nil,
 		httpserver.WithAddr(""),
-		httpserver.WithShutdownTimeout(0),
 		httpserver.WithReadTimeout(0),
 		httpserver.WithWriteTimeout(0),
 	)
@@ -31,7 +31,8 @@ func TestNotify(t *testing.T) {
 	t.Parallel()
 
 	srv := httpserver.New(nil)
+	go srv.Run()
 
-	require.NoError(t, srv.Shutdown())
+	require.NoError(t, srv.Shutdown(context.TODO()))
 	assert.ErrorIs(t, <-srv.Notify(), http.ErrServerClosed)
 }

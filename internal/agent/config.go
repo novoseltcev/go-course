@@ -16,6 +16,7 @@ type Config struct {
 	RawReportInterval string        `env:"REPORT_INTERVAL" json:"report_interval"`
 	SecretKey         string        `env:"KEY"             json:"-"`
 	CryptoKey         string        `env:"CRYPTO_KEY,file" json:"crypto_key"`
+	ReporterType      string        `env:"REPORTER_TYPE"   json:"reporter_type"`
 	PollInterval      time.Duration `json:"-"`
 	ReportInterval    time.Duration `json:"-"`
 }

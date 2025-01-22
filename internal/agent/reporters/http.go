@@ -16,7 +16,7 @@ import (
 	"github.com/novoseltcev/go-course/pkg/retry"
 )
 
-//go:generate mockgen -source=http.go -destination=./http_mock_test.go -package=reporters_test
+//go:generate mockgen -source=http.go -destination=./http_mock_test.go -package=reporters_test -typed
 type (
 	compressor interface {
 		Compress(data []byte) ([]byte, error)
@@ -31,9 +31,9 @@ type (
 	}
 )
 
-type Option func(*ReportClient)
+type Option func(*HTTPReporter)
 
-type ReportClient struct {
+type HTTPReporter struct {
 	c         *http.Client
 	retryOpts *retry.Options
 	baseURL   string
@@ -44,35 +44,35 @@ type ReportClient struct {
 
 // WithRetry enables retrying of the request.
 func WithRetry(opts retry.Options) Option {
-	return func(r *ReportClient) {
+	return func(r *HTTPReporter) {
 		r.retryOpts = &opts
 	}
 }
 
 // WithEncryption enables encryption of the request body.
 func WithEncryption(enc encryptor) Option {
-	return func(r *ReportClient) {
+	return func(r *HTTPReporter) {
 		r.enc = enc
 	}
 }
 
 // WithCompression enables compression of the request body.
 func WithCompression(cmp compressor) Option {
-	return func(r *ReportClient) {
+	return func(r *HTTPReporter) {
 		r.cmp = cmp
 	}
 }
 
 // WithCheckSum enables checksum signing of the request body.
 func WithCheckSum(hr hasher) Option {
-	return func(r *ReportClient) {
+	return func(r *HTTPReporter) {
 		r.hr = hr
 	}
 }
 
 // NewHTTPClient creates a new ReportClient.
-func NewHTTPClient(c *http.Client, baseURL string, opts ...Option) *ReportClient {
-	reportClient := &ReportClient{c: c, baseURL: baseURL}
+func NewHTTPReporter(c *http.Client, baseURL string, opts ...Option) *HTTPReporter {
+	reportClient := &HTTPReporter{c: c, baseURL: baseURL}
 
 	for _, opt := range opts {
 		opt(reportClient)
@@ -81,7 +81,7 @@ func NewHTTPClient(c *http.Client, baseURL string, opts ...Option) *ReportClient
 	return reportClient
 }
 
-func (rc *ReportClient) Report(ctx context.Context, metrics []schemas.Metric) error {
+func (rc *HTTPReporter) Report(ctx context.Context, metrics []schemas.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -94,7 +94,7 @@ func (rc *ReportClient) Report(ctx context.Context, metrics []schemas.Metric) er
 	return rc.send(ctx, rc.baseURL+"/updates/", b)
 }
 
-func (rc *ReportClient) prepareData(metrics []schemas.Metric) ([]byte, error) {
+func (rc *HTTPReporter) prepareData(metrics []schemas.Metric) ([]byte, error) {
 	if len(metrics) == 0 {
 		return nil, nil
 	}
@@ -121,7 +121,7 @@ func (rc *ReportClient) prepareData(metrics []schemas.Metric) ([]byte, error) {
 	return b, nil
 }
 
-func (rc *ReportClient) send(ctx context.Context, url string, body []byte) error {
+func (rc *HTTPReporter) send(ctx context.Context, url string, body []byte) error {
 	if len(body) == 0 {
 		return nil
 	}

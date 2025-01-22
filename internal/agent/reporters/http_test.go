@@ -18,10 +18,15 @@ import (
 	"github.com/novoseltcev/go-course/pkg/testutils"
 )
 
-func TestReportSuccessBase(t *testing.T) {
-	value := 10.123
-	delta := int64(10)
+var (
+	value       = float64(testutils.FLAOT)
+	delta       = int64(testutils.INT)
+	testMetrics = []schemas.Metric{{ID: testutils.STRING, MType: schemas.Counter}}
+)
 
+const testMetricsJSON = `[{"id":"string","type":"counter"}]`
+
+func TestHTTPReporter_ReportSuccessBase(t *testing.T) {
 	tests := []struct {
 		name string
 		got  []schemas.Metric
@@ -62,24 +67,20 @@ func TestReportSuccessBase(t *testing.T) {
 
 			gock.New(testutils.URL).Post("/").JSON(tt.want).Reply(http.StatusOK)
 
-			reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL)
+			reporter := reporters.NewHTTPReporter(http.DefaultClient, testutils.URL)
 
 			assert.NoError(t, reporter.Report(context.TODO(), tt.got))
 		})
 	}
 }
 
-var testMetrics = []schemas.Metric{{ID: testutils.STRING, MType: schemas.Counter}}
-
-const testMetricsJSON = `[{"id":"string","type":"counter"}]`
-
-func TestReportSuccessWithCheckSum(t *testing.T) {
+func TestHTTPReporter_ReportSuccessWithCheckSum(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	defer gock.Off()
 
 	hasher := NewMockhasher(ctrl)
-	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithCheckSum(hasher))
+	reporter := reporters.NewHTTPReporter(http.DefaultClient, testutils.URL, reporters.WithCheckSum(hasher))
 
 	hasher.EXPECT().GetHash([]byte(testMetricsJSON)).Return([]byte{1, 2, 3}, nil)
 	gock.New(testutils.URL).Post("/").MatchHeader("Hashsha256", hex.Dump([]byte{1, 2, 3}))
@@ -87,7 +88,7 @@ func TestReportSuccessWithCheckSum(t *testing.T) {
 	assert.NoError(t, reporter.Report(context.TODO(), testMetrics))
 }
 
-func TestReportSuccessWithOptions(t *testing.T) {
+func TestHTTPReporter_ReportSuccessWithOptions(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	defer gock.Off()
@@ -95,7 +96,7 @@ func TestReportSuccessWithOptions(t *testing.T) {
 	hasher := NewMockhasher(ctrl)
 	encryptor := NewMockencryptor(ctrl)
 	compressor := NewMockcompressor(ctrl)
-	reporter := reporters.NewHTTPClient(
+	reporter := reporters.NewHTTPReporter(
 		http.DefaultClient,
 		testutils.URL,
 		reporters.WithCheckSum(hasher),
@@ -115,12 +116,12 @@ func TestReportSuccessWithOptions(t *testing.T) {
 	assert.NoError(t, reporter.Report(context.TODO(), testMetrics))
 }
 
-func TestReportSuccessWithRetry(t *testing.T) {
+func TestHTTPReporter_ReportSuccessWithRetry(t *testing.T) {
 	defer gock.Off()
 
 	gock.New(testutils.URL).Post("/").JSON([]byte(testMetricsJSON)).Times(2)
 
-	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithRetry(retry.Options{
+	reporter := reporters.NewHTTPReporter(http.DefaultClient, testutils.URL, reporters.WithRetry(retry.Options{
 		Attempts: []time.Duration{time.Millisecond},
 		Retries:  2,
 	}))
@@ -128,10 +129,10 @@ func TestReportSuccessWithRetry(t *testing.T) {
 	assert.NoError(t, reporter.Report(context.TODO(), testMetrics))
 }
 
-func TestReportFailedRetries(t *testing.T) {
+func TestHTTPReporter_ReportFailedRetries(t *testing.T) {
 	defer gock.Off()
 
-	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithRetry(retry.Options{
+	reporter := reporters.NewHTTPReporter(http.DefaultClient, testutils.URL, reporters.WithRetry(retry.Options{
 		Attempts: []time.Duration{time.Millisecond},
 		Retries:  2,
 	}))
@@ -144,13 +145,13 @@ func TestReportFailedRetries(t *testing.T) {
 	)
 }
 
-func TestReportFailedEncription(t *testing.T) {
+func TestHTTPReporter_ReportFailedEncription(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
 	enc := NewMockencryptor(ctrl)
-	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithEncryption(enc))
+	reporter := reporters.NewHTTPReporter(http.DefaultClient, testutils.URL, reporters.WithEncryption(enc))
 
 	enc.EXPECT().Encrypt([]byte(testMetricsJSON)).Return(nil, testutils.Err)
 
@@ -160,13 +161,13 @@ func TestReportFailedEncription(t *testing.T) {
 	)
 }
 
-func TestReportFailedCompression(t *testing.T) {
+func TestHTTPReporter_ReportFailedCompression(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
 	compressor := NewMockcompressor(ctrl)
-	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithCompression(compressor))
+	reporter := reporters.NewHTTPReporter(http.DefaultClient, testutils.URL, reporters.WithCompression(compressor))
 
 	compressor.EXPECT().Compress([]byte(testMetricsJSON)).Return(nil, testutils.Err)
 
@@ -176,26 +177,26 @@ func TestReportFailedCompression(t *testing.T) {
 	)
 }
 
-func TestReportFailedCheckSum(t *testing.T) {
+func TestHTTPReporter_ReportFailedCheckSum(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
 	hasher := NewMockhasher(ctrl)
-	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.STRING, reporters.WithCheckSum(hasher))
+	reporter := reporters.NewHTTPReporter(http.DefaultClient, testutils.STRING, reporters.WithCheckSum(hasher))
 
 	hasher.EXPECT().GetHash([]byte(testMetricsJSON)).Return(nil, testutils.Err)
 
 	assert.EqualError(t, reporter.Report(context.TODO(), testMetrics), "cannot get hash: "+testutils.Err.Error())
 }
 
-func TestReportWithNilRequestBodySkipSend(t *testing.T) {
+func TestHTTPReporter_ReportWithNilRequestBodySkipSend(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
 	enc := NewMockencryptor(ctrl)
-	reporter := reporters.NewHTTPClient(http.DefaultClient, testutils.URL, reporters.WithEncryption(enc))
+	reporter := reporters.NewHTTPReporter(http.DefaultClient, testutils.URL, reporters.WithEncryption(enc))
 
 	enc.EXPECT().Encrypt(gomock.Any()).Return([]byte{}, nil)
 	gock.New(testutils.URL).Post("/").Times(0)
@@ -203,10 +204,10 @@ func TestReportWithNilRequestBodySkipSend(t *testing.T) {
 	assert.NoError(t, reporter.Report(context.TODO(), testMetrics))
 }
 
-func TestReportFailsCreateRequest(t *testing.T) {
+func TestHTTPReporter_ReportFailsCreateRequest(t *testing.T) {
 	t.Parallel()
 
-	reporter := reporters.NewHTTPClient(http.DefaultClient, "\t")
+	reporter := reporters.NewHTTPReporter(http.DefaultClient, "\t")
 
 	assert.ErrorContains(t,
 		reporter.Report(context.TODO(), testMetrics),

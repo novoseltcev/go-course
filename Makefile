@@ -27,7 +27,7 @@ staticlint: build-staticlint $(STATICLINT_DIR)/staticlint
 
 .PHONY: agent
 agent: $(AGENT_DIR)/agent
-	$(AGENT_DIR)/agent -c ./config/agent.json
+	$(AGENT_DIR)/agent -c ./config/agent.json -t grpc -a :8000
 
 DATABASE_URI=postgresql://postgres:postgres@0.0.0.0:5432/praktikum?sslmode=disable
 .PHONY: server

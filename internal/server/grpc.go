@@ -10,7 +10,6 @@ import (
 
 	"github.com/novoseltcev/go-course/internal/schemas"
 	"github.com/novoseltcev/go-course/internal/storages"
-	"github.com/novoseltcev/go-course/proto/metrics"
 	pb "github.com/novoseltcev/go-course/proto/metrics"
 )
 
@@ -86,7 +85,7 @@ func (s *MetricsServer) Update(ctx context.Context, r *pb.UpdateRequest) (*pb.Up
 }
 
 func (s *MetricsServer) UpdateBatch(ctx context.Context, req *pb.UpdateBatchRequest) (*pb.UpdateBatchResponse, error) {
-	var response metrics.UpdateBatchResponse
+	var response pb.UpdateBatchResponse
 
 	metrics := make([]schemas.Metric, len(req.GetMetrics()))
 
@@ -123,15 +122,15 @@ func mapMsgToSchema(msg *pb.Metric) (*schemas.Metric, error) {
 	return &result, result.Validate()
 }
 
-func mapSchemaToMsg(metric *schemas.Metric) (*metrics.Metric, error) {
-	Type, ok := metrics.Type_value[metric.MType]
+func mapSchemaToMsg(metric *schemas.Metric) (*pb.Metric, error) {
+	Type, ok := pb.Type_value[metric.MType]
 	if !ok {
 		return nil, schemas.ErrInvalidType
 	}
 
-	result := metrics.Metric{
+	result := pb.Metric{
 		Id:   metric.ID,
-		Type: metrics.Type(Type),
+		Type: pb.Type(Type),
 	}
 
 	if metric.Value != nil {

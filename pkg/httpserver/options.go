@@ -24,10 +24,3 @@ func WithWriteTimeout(timeout time.Duration) Option {
 		s.server.WriteTimeout = timeout
 	}
 }
-
-// WithShutdownTimeout sets timeout for graceful shutdown.
-func WithShutdownTimeout(timeout time.Duration) Option {
-	return func(s *Server) {
-		s.shutdownTimeout = timeout
-	}
-}

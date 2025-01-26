@@ -40,21 +40,7 @@ func uncompress(t *testing.T, body []byte) []byte {
 	return b
 }
 
-func TestGzipUnencoded(t *testing.T) {
-	t.Parallel()
-
-	ts := httptest.NewServer(middlewares.Gzip(helpers.Webhook(t)))
-	defer ts.Close()
-
-	resp := helpers.SendRequest(t, ts, bytes.NewBufferString(testutils.JSON), nil)
-	defer resp.Body.Close()
-	body := helpers.ReadBody(t, resp.Body)
-
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.JSONEq(t, testutils.JSON, string(body))
-}
-
-func TestGzipEncodedAccept(t *testing.T) {
+func TestGzip_CompressedResponse_Success(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(middlewares.Gzip(helpers.Webhook(t)))
@@ -71,7 +57,7 @@ func TestGzipEncodedAccept(t *testing.T) {
 	assert.JSONEq(t, testutils.JSON, string(uncompress(t, body)))
 }
 
-func TestGzipEncodedContent(t *testing.T) {
+func TestGzip_CompressedRequest_Success(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(middlewares.Gzip(helpers.Webhook(t)))
@@ -86,4 +72,57 @@ func TestGzipEncodedContent(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.JSONEq(t, testutils.JSON, string(body))
+}
+
+func TestGzip_WithoutCompression_Success(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{
+			name:  "empty",
+			value: "",
+		},
+		{
+			name:  "unknown",
+			value: "UNKNOWN",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ts := httptest.NewServer(middlewares.Gzip(helpers.Webhook(t)))
+			defer ts.Close()
+
+			resp := helpers.SendRequest(t, ts, bytes.NewBufferString(testutils.JSON), map[string]string{
+				"Accept-Encoding":  tt.value,
+				"Content-Encoding": tt.value,
+			})
+			defer resp.Body.Close()
+			body := helpers.ReadBody(t, resp.Body)
+
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+			assert.JSONEq(t, testutils.JSON, string(body))
+		})
+	}
+}
+
+func TestGzip_EmptyRequestWithContentEncoding_DecryptError(t *testing.T) {
+	t.Parallel()
+
+	ts := httptest.NewServer(middlewares.Gzip(helpers.Webhook(t)))
+	defer ts.Close()
+
+	resp := helpers.SendRequest(t, ts,
+		nil,
+		map[string]string{"Content-Encoding": "gzip"},
+	)
+	defer resp.Body.Close()
+	body := helpers.ReadBody(t, resp.Body)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Equal(t, "cannot decompress body\n", string(body))
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,6 +25,7 @@ var configFile string
 func Cmd() *cobra.Command {
 	cfg := &server.Config{
 		Address:         ":8080",
+		GRPCAddress:     ":8000",
 		Restore:         false,
 		StoreInterval:   time.Second * 30, // nolint:mnd
 		FileStoragePath: "/tmp/metrics-db.json",
@@ -36,7 +38,7 @@ func Cmd() *cobra.Command {
 			logger := logrus.New()
 			fs := afero.NewOsFs()
 
-			if err := cfg.Load(fs, configFile, cmd.Flags()); err != nil {
+			if err := cfg.Load(fs, configFile, cmd.Flags(), os.Args[1:]); err != nil {
 				logger.WithError(err).Fatal("failed to parse config")
 			}
 
@@ -71,13 +73,12 @@ func Cmd() *cobra.Command {
 				}
 			}
 
-			app := server.NewApp(cfg, logger, db, storage, decryptor)
+			app := server.NewApp(cfg, logger, fs, db, storage, decryptor)
 
-			sigCh := make(chan os.Signal, 1)
-			signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-			defer signal.Stop(sigCh)
+			ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+			defer cancel()
 
-			app.Run(sigCh)
+			app.Run(ctx)
 		},
 	}
 	initFlags(cfg, cmd.Flags())
@@ -89,10 +90,12 @@ func Cmd() *cobra.Command {
 func initFlags(cfg *server.Config, flags *pflag.FlagSet) {
 	flags.StringVarP(&configFile, "config", "c", "", "Path to config file")
 	flags.StringVarP(&cfg.Address, "a", "a", cfg.Address, "Server address")
+	flags.StringVarP(&cfg.GRPCAddress, "g", "g", cfg.GRPCAddress, "GRPC server address")
 	flags.StringVarP(&cfg.DatabaseDsn, "d", "d", cfg.DatabaseDsn, "Database connection string")
 	flags.StringVarP(&cfg.RawStoreInterval, "s", "s", cfg.RawStoreInterval, "Store interval")
 	flags.StringVarP(&cfg.FileStoragePath, "f", "f", cfg.FileStoragePath, "Path to backup")
 	flags.BoolVarP(&cfg.Restore, "r", "r", cfg.Restore, "Restore from backup after restart")
 	flags.StringVarP(&cfg.SecretKey, "k", "k", cfg.SecretKey, "Secret key for hashing data")
 	flags.StringVar(&cfg.CryptoKey, "crypto-key", cfg.CryptoKey, "Path to private key for decrypt data")
+	flags.StringArrayVarP(&cfg.RawTrustedSubnets, "trusted-subnets", "t", cfg.RawTrustedSubnets, "Trusted subnets")
 }

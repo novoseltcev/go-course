@@ -9,13 +9,13 @@ import (
 	"github.com/novoseltcev/go-course/internal/schemas"
 )
 
-func CollectCoreMetrics(_ context.Context) ([]schemas.Metric, error) {
-	vmStat, err := mem.VirtualMemory()
+func CollectCoreMetrics(ctx context.Context) ([]schemas.Metric, error) {
+	vmStat, err := mem.VirtualMemoryWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	cpuLoad, err := cpu.Percent(0, true)
+	cpuLoad, err := cpu.PercentWithContext(ctx, 0, true)
 	if err != nil {
 		return nil, err
 	}

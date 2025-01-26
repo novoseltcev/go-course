@@ -66,12 +66,9 @@ func serialize(metric *schemas.Metric) (string, error) {
 		return "", err
 	}
 
-	switch metric.MType {
-	case schemas.Gauge:
-		return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", *metric.Value), "0"), "."), nil
-	case schemas.Counter:
+	if metric.Delta != nil {
 		return strconv.Itoa(int(*metric.Delta)), nil
-	default:
-		return "", schemas.ErrInvalidType
 	}
+
+	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", *metric.Value), "0"), "."), nil
 }

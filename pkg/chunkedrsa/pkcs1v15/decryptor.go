@@ -22,7 +22,11 @@ func NewDecryptor(key *rsa.PrivateKey) *Decryptor {
 func (d *Decryptor) Decrypt(data []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 
-	chunks := utils.SplitToChunks(data, d.privateKey.Size()) // 11 bytes for PKCS1 v1.5 padding
+	chunks, err := utils.SplitToChunks(data, d.privateKey.Size()) // 11 bytes for PKCS1 v1.5 padding
+	if err != nil {
+		return nil, err
+	}
+
 	for _, chunk := range chunks {
 		decryptedChunk, err := rsa.DecryptPKCS1v15(rand.Reader, d.privateKey, chunk)
 		if err != nil {

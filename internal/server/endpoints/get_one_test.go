@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/steinfletcher/apitest"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/novoseltcev/go-course/internal/schemas"
 	"github.com/novoseltcev/go-course/internal/server/endpoints"
@@ -83,7 +83,7 @@ func TestGetOneMetric(t *testing.T) {
 			name: "invalid metric type",
 			got:  got{id: testutils.STRING, Type: "unknown"},
 			code: http.StatusBadRequest,
-			body: "metric-id validator: type is invalid\n",
+			body: "metric validator: type is invalid\n",
 		},
 		{
 			"failed serialization unknown",

@@ -7,7 +7,7 @@ import (
 	"github.com/novoseltcev/go-course/internal/schemas"
 )
 
-//go:generate mockgen -source=storager.go  -destination=../../mocks/storager_mock.go -package=mocks
+//go:generate mockgen -source=storager.go  -destination=../../mocks/storager_mock.go -package=mocks -typed
 
 var ErrNotFound = errors.New("metric not found")
 

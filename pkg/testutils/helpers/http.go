@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// nolint: testifylint
 func Webhook(t *testing.T) http.HandlerFunc {
 	t.Helper()
 
@@ -16,19 +17,12 @@ func Webhook(t *testing.T) http.HandlerFunc {
 		defer r.Body.Close()
 
 		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-
-			return
-		}
+		require.NoError(t, err)
 
 		w.Header().Set("Content-Type", "application/json")
 
-		if _, err := w.Write(body); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-
-			return
-		}
+		_, err = w.Write(body)
+		require.NoError(t, err)
 	})
 }
 

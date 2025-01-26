@@ -24,11 +24,20 @@ func FanIn[T any](ctx context.Context, chs ...<-chan T) <-chan T {
 		go func() {
 			defer wg.Done()
 
-			for data := range chClosure {
+			for {
 				select {
 				case <-ctx.Done():
 					return
-				case finalCh <- data:
+				case v, ok := <-chClosure:
+					if !ok {
+						return
+					}
+
+					select {
+					case <-ctx.Done():
+						return
+					case finalCh <- v:
+					}
 				}
 			}
 		}()

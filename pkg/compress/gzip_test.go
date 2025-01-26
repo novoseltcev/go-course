@@ -2,6 +2,8 @@ package compress_test
 
 import (
 	"compress/gzip"
+	"fmt"
+	"io"
 	"strconv"
 	"testing"
 
@@ -9,9 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/novoseltcev/go-course/pkg/compress"
+	"github.com/novoseltcev/go-course/pkg/testutils"
 )
 
-func TestSuccess(t *testing.T) {
+func TestSuccessCompressAndDecompress(t *testing.T) {
 	t.Parallel()
 
 	for i := gzip.HuffmanOnly; i < gzip.BestCompression; i++ {
@@ -35,20 +38,52 @@ func TestSuccess(t *testing.T) {
 	}
 }
 
-func TestNewGzipLevelError(t *testing.T) {
+func TestCompress_ErrorInvalidLevel(t *testing.T) {
 	t.Parallel()
 
-	t.Run("-3", func(t *testing.T) {
-		t.Parallel()
+	for _, level := range []int{-3, 10} {
+		t.Run(strconv.Itoa(level), func(t *testing.T) {
+			t.Parallel()
 
-		_, err := compress.NewGzip(-3)
-		assert.EqualError(t, err, "invalid compression level: -3")
-	})
+			cmp := compress.GzipCompressor{Level: level}
+			_, err := cmp.Compress(testutils.Bytes)
 
-	t.Run("10", func(t *testing.T) {
-		t.Parallel()
+			assert.EqualError(t, err, fmt.Sprintf("gzip: invalid compression level: %d", level))
+		})
+	}
+}
 
-		_, err := compress.NewGzip(10)
-		assert.EqualError(t, err, "invalid compression level: 10")
-	})
+func TestDecompess_ErrorCreateReader(t *testing.T) {
+	t.Parallel()
+
+	cmp, err := compress.NewGzip(gzip.BestCompression)
+	require.NoError(t, err)
+
+	_, err = cmp.Decompress([]byte{})
+
+	assert.ErrorIs(t, err, io.EOF)
+}
+
+func TestDecompess_ErrorCopy(t *testing.T) {
+	t.Parallel()
+
+	cmp, err := compress.NewGzip(gzip.BestCompression)
+	require.NoError(t, err)
+
+	_, err = cmp.Decompress([]byte{})
+
+	assert.ErrorIs(t, err, io.EOF)
+}
+
+func TestNewGzip_ErrorInvalidLevel(t *testing.T) {
+	t.Parallel()
+
+	for _, level := range []int{-3, 10} {
+		t.Run(strconv.Itoa(level), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := compress.NewGzip(level)
+			assert.EqualError(t, err, fmt.Sprintf("invalid compression level: %d", level))
+		})
+	}
 }

@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//go:generate mockgen -source=decrypt.go -destination=./mock_test.go -package=middlewares_test
+//go:generate mockgen -source=decrypt.go -destination=./decrypt_mock_test.go -package=middlewares_test -typed
 type decryptor interface {
 	Decrypt(b []byte) ([]byte, error)
 }

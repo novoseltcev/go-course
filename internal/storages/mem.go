@@ -8,31 +8,31 @@ import (
 )
 
 type MemStorage struct {
-	m map[string]map[string]schemas.Metric
+	Data map[string]map[string]schemas.MetricValues
 }
 
 func NewMemStorage() *MemStorage {
-	m := make(map[string]map[string]schemas.Metric)
-	m[schemas.Counter] = make(map[string]schemas.Metric)
-	m[schemas.Gauge] = make(map[string]schemas.Metric)
+	m := make(map[string]map[string]schemas.MetricValues)
+	m[schemas.Counter] = make(map[string]schemas.MetricValues)
+	m[schemas.Gauge] = make(map[string]schemas.MetricValues)
 
 	return &MemStorage{m}
 }
 
 func (s MemStorage) GetOne(_ context.Context, id, mType string) (*schemas.Metric, error) {
-	result, ok := s.m[mType][id]
+	result, ok := s.Data[mType][id]
 	if !ok {
 		return nil, ErrNotFound
 	}
 
-	return &result, nil
+	return &schemas.Metric{ID: id, MType: mType, Value: result.Value, Delta: result.Delta}, nil
 }
 
 func (s *MemStorage) GetAll(_ context.Context) ([]schemas.Metric, error) {
 	result := make([]schemas.Metric, 0)
 
-	for Type := range s.m {
-		data := s.m[Type]
+	for Type := range s.Data {
+		data := s.Data[Type]
 
 		names := make([]string, 0, len(data))
 		for name := range data {
@@ -42,7 +42,9 @@ func (s *MemStorage) GetAll(_ context.Context) ([]schemas.Metric, error) {
 		sort.Strings(names)
 
 		for _, name := range names {
-			result = append(result, data[name])
+			d := data[name]
+
+			result = append(result, schemas.Metric{ID: name, MType: Type, Value: d.Value, Delta: d.Delta})
 		}
 	}
 
@@ -50,11 +52,11 @@ func (s *MemStorage) GetAll(_ context.Context) ([]schemas.Metric, error) {
 }
 
 func (s *MemStorage) Save(_ context.Context, metric *schemas.Metric) error {
-	saved, ok := s.m[metric.MType][metric.ID]
-	if metric.MType == "counter" && ok && saved.Delta != nil {
-		*saved.Delta += *metric.Delta
+	stored, ok := s.Data[metric.MType][metric.ID]
+	if ok && metric.MType == "counter" && stored.Delta != nil {
+		*stored.Delta += *metric.Delta
 	} else {
-		s.m[metric.MType][metric.ID] = *metric
+		s.Data[metric.MType][metric.ID] = schemas.MetricValues{Value: metric.Value, Delta: metric.Delta}
 	}
 
 	return nil

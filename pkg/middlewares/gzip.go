@@ -47,7 +47,7 @@ func Gzip(next http.Handler) http.Handler {
 			decompressor, err := gzip.NewReader(r.Body)
 			if err != nil {
 				log.WithError(err).Error("cannot decompress body")
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				http.Error(w, "cannot decompress body", http.StatusInternalServerError)
 
 				return
 			}
@@ -60,18 +60,16 @@ func Gzip(next http.Handler) http.Handler {
 			r.Body = cr
 		}
 
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			w.Header().Set("Content-Encoding", "gzip")
+
+			gw := gzip.NewWriter(w)
+			defer gw.Close()
+
+			next.ServeHTTP(&compressWriter{ResponseWriter: w, compressor: gw}, r)
+		} else {
 			next.ServeHTTP(w, r)
-
-			return
 		}
-
-		w.Header().Set("Content-Encoding", "gzip")
-		gw := gzip.NewWriter(w)
-
-		defer gw.Close()
-
-		next.ServeHTTP(&compressWriter{ResponseWriter: w, compressor: gw}, r)
 	}
 
 	return http.HandlerFunc(wrapper)
